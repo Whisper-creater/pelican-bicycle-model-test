@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>写实鹈鹕骑自行车 - 精细2D SVG动力学动画</title>
+  <style>
+    :root {
+      --bg-top: #1a2a3a;
+      --bg-mid: #3b5e7c;
+      --bg-horizon: #d9a773;
+      --panel-bg: rgba(15, 23, 34, 0.78);
+      --panel-border: rgba(255, 255, 255, 0.16);
+      --accent: #f0a854;
+      --text-main: #f4f6f9;
+      --text-sub: #a9b8c9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0d1620;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text-main);
+    }
+
+    #stage-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    #stage-container:active {
+      cursor: grabbing;
+    }
+
+    svg#scene {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* HUD Controls */
+    .hud-panel {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+      z-index: 20;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .hud-label {
+      color: var(--text-sub);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .hud-val {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      min-width: 38px;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 105px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(240, 168, 84, 0.7);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+
+    .hud-btn {
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-main);
+      padding: 6px 13px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .hud-btn:hover {
+      background: rgba(240, 168, 84, 0.24);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .hud-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #121820;
+      font-weight: 600;
+    }
+
+    .title-badge {
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .title-badge h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .title-badge p {
+      font-size: 11.5px;
+      color: var(--text-sub);
+    }
+  </style>
+</head>
+<body>
+
+<div class="title-badge">
+  <h1>写实白鹈鹕骑复古自行车 (Pelecanus onocrotalus)</h1>
+  <p>纯SVG多层羽翼绘制 · 逆运动学(IK)双腿与曲柄联动 · 喉囊流体物理模拟 · 滚轮可缩放观察细节</p>
+</div>
+
+<div id="stage-container">
+  <svg id="scene" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- ==================== SKY & ATMOSPHERE GRADIENTS ==================== -->
+      <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#1d354d" />
+        <stop offset="32%" stop-color="#3c6282" />
+        <stop offset="60%" stop-color="#7c98a8" />
+        <stop offset="79%" stop-color="#d5b38c" />
+        <stop offset="92%" stop-color="#f2c48d" />
+        <stop offset="100%" stop-color="#f8d8a8" />
+      </linearGradient>
+
+      <radialGradient id="sunGlow" cx="78%" cy="56%" r="38%">
+        <stop offset="0%" stop-color="#fff8e6" stop-opacity="0.95" />
+        <stop offset="22%" stop-color="#ffd28e" stop-opacity="0.65" />
+        <stop offset="55%" stop-color="#e89954" stop-opacity="0.22" />
+        <stop offset="100%" stop-color="#d58044" stop-opacity="0" />
+      </radialGradient>
+
+      <linearGradient id="seaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#2c4e63" />
+        <stop offset="35%" stop-color="#234357" />
+        <stop offset="75%" stop-color="#1b3749" />
+        <stop offset="100%" stop-color="#152b3a" />
+      </linearGradient>
+
+      <linearGradient id="roadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#4e5259" />
+        <stop offset="15%" stop-color="#3e4248" />
+        <stop offset="60%" stop-color="#31353b" />
+        <stop offset="100%" stop-color="#24272c" />
+      </linearGradient>
+
+      <linearGradient id="curbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#9e988e" />
+        <stop offset="40%" stop-color="#7c776e" />
+        <stop offset="100%" stop-color="#58544d" />
+      </linearGradient>
+
+      <!-- ==================== METALLIC & BICYCLE GRADIENTS ==================== -->
+      <!-- Vintage British Racing Green / Deep Emerald Enamel Frame Tubes -->
+      <linearGradient id="frameTubeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#0b2820" />
+        <stop offset="22%" stop-color="#1d5242" />
+        <stop offset="38%" stop-color="#528c78" />
+        <stop offset="50%" stop-color="#194436" />
+        <stop offset="82%" stop-color="#0a221a" />
+        <stop offset="100%" stop-color="#17382d" />
+      </linearGradient>
+
+      <linearGradient id="frameTubeVert" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#0b2820" />
+        <stop offset="25%" stop-color="#225b49" />
+        <stop offset="42%" stop-color="#629e89" />
+        <stop offset="58%" stop-color="#194436" />
+        <stop offset="88%" stop-color="#091e17" />
+        <stop offset="100%" stop-color="#17382d" />
+      </linearGradient>
+
+      <!-- Gold / Brass Lug Accents -->
+      <linearGradient id="brassLugGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#9e7425" />
+        <stop offset="30%" stop-color="#f5d98e" />
+        <stop offset="50%" stop-color="#c99b3b" />
+        <stop offset="75%" stop-color="#fff0c2" />
+        <stop offset="100%" stop-color="#755315" />
+      </linearGradient>
+
+      <!-- Chrome / Polished Steel -->
+      <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#8b939c" />
+        <stop offset="20%" stop-color="#ffffff" />
+        <stop offset="44%" stop-color="#b0b8c2" />
+        <stop offset="55%" stop-color="#4e555e" />
+        <stop offset="78%" stop-color="#e3e8ee" />
+        <stop offset="100%" stop-color="#69717a" />
+      </linearGradient>
+
+      <linearGradient id="chromeHoriz" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#7c848d" />
+        <stop offset="25%" stop-color="#ffffff" />
+        <stop offset="50%" stop-color="#9aa3ad" />
+        <stop offset="70%" stop-color="#454c54" />
+        <stop offset="90%" stop-color="#dfe5ec" />
+        <stop offset="100%" stop-color="#6e7680" />
+      </linearGradient>
+
+      <radialGradient id="hubChrome" cx="38%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#ffffff" />
+        <stop offset="35%" stop-color="#cfd6de" />
+        <stop offset="70%" stop-color="#6f7882" />
+        <stop offset="100%" stop-color="#353b42" />
+      </radialGradient>
+
+      <!-- Leather Saddle & Grips (Brooks Honey/ Aged Brown Leather) -->
+      <linearGradient id="leatherGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#9c5a25" />
+        <stop offset="22%" stop-color="#b86f34" />
+        <stop offset="55%" stop-color="#7d4316" />
+        <stop offset="85%" stop-color="#4f2709" />
+        <stop offset="100%" stop-color="#381a04" />
+      </linearGradient>
+
+      <!-- Tire Rubber & Tan Sidewall -->
+      <radialGradient id="tireRubberGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="86%" stop-color="#2c2f33" />
+        <stop offset="92%" stop-color="#191b1e" />
+        <stop offset="96%" stop-color="#3d4147" />
+        <stop offset="100%" stop-color="#141618" />
+      </radialGradient>
+
+      <!-- ==================== PELICAN ANATOMY GRADIENTS ==================== -->
+      <!-- White/Cream Plumage with warm sunlight & cool sky ambient shadow -->
+      <linearGradient id="plumageBodyGrad" x1="15%" y1="5%" x2="80%" y2="95%">
+        <stop offset="0%" stop-color="#ffffff" />
+        <stop offset="28%" stop-color="#fdfaf2" />
+        <stop offset="58%" stop-color="#efe6d8" />
+        <stop offset="82%" stop-color="#cfc5b7" />
+        <stop offset="100%" stop-color="#9ea4ab" />
+      </linearGradient>
+
+      <linearGradient id="featherSingleGrad" x1="0%" y1="0%" x2="100%" y2="85%">
+        <stop offset="0%" stop-color="#ffffff" />
+        <stop offset="45%" stop-color="#faf5eb" />
+        <stop offset="78%" stop-color="#e3d8c8" />
+        <stop offset="100%" stop-color="#bfb5a8" />
+      </linearGradient>
+
+      <linearGradient id="featherWarmBreast" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fffdf7" />
+        <stop offset="35%" stop-color="#f7dfb4" />
+        <stop offset="70%" stop-color="#e5b86e" />
+        <stop offset="100%" stop-color="#c4944e" />
+      </linearGradient>
+
+      <!-- Dark Slate/Charcoal Primary & Secondary Flight Feathers -->
+      <linearGradient id="primaryFeatherGrad" x1="0%" y1="0%" x2="100%" y2="40%">
+        <stop offset="0%" stop-color="#3d434d" />
+        <stop offset="35%" stop-color="#23272e" />
+        <stop offset="75%" stop-color="#15181c" />
+        <stop offset="100%" stop-color="#0c0e12" />
+      </linearGradient>
+
+      <linearGradient id="farWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#dfd7ca" />
+        <stop offset="50%" stop-color="#bdb4a8" />
+        <stop offset="100%" stop-color="#8c867e" />
+      </linearGradient>
+
+      <!-- Upper Mandible (Pelican Beak - Horn/Slate/Salmon-Orange ridge) -->
+      <linearGradient id="upperBeakGrad" x1="0%" y1="0%" x2="15%" y2="100%">
+        <stop offset="0%" stop-color="#d98c5f" />
+        <stop offset="22%" stop-color="#f0b684" />
+        <stop offset="48%" stop-color="#8e99a6" />
+        <stop offset="75%" stop-color="#5d6875" />
+        <stop offset="92%" stop-color="#d47b4a" />
+        <stop offset="100%" stop-color="#8f4622" />
+      </linearGradient>
+
+      <!-- Translucent Subsurface-Scattered Gular Pouch (Throat Sac) -->
+      <radialGradient id="pouchSubsurfaceGrad" cx="55%" cy="38%" r="65%">
+        <stop offset="0%" stop-color="#ffdf9e" stop-opacity="0.96" />
+        <stop offset="32%" stop-color="#f7a963" stop-opacity="0.95" />
+        <stop offset="65%" stop-color="#e06d46" stop-opacity="0.94" />
+        <stop offset="88%" stop-color="#b3422c" stop-opacity="0.96" />
+        <stop offset="100%" stop-color="#7d2518" stop-opacity="0.98" />
+      </radialGradient>
+
+      <linearGradient id="pouchRimGrad" x1="0%" y1="0%" x2="100%" y2="10%">
+        <stop offset="0%" stop-color="#8f3f29" />
+        <stop offset="40%" stop-color="#c96544" />
+        <stop offset="80%" stop-color="#d67c54" />
+        <stop offset="100%" stop-color="#9e4327" />
+      </linearGradient>
+
+      <!-- Facial Bare Skin (Rosy-peach around eye) -->
+      <radialGradient id="facialSkinGrad" cx="45%" cy="45%" r="55%">
+        <stop offset="0%" stop-color="#f7cbb6" />
+        <stop offset="60%" stop-color="#e39d86" />
+        <stop offset="100%" stop-color="#b87360" />
+      </radialGradient>
+
+      <!-- Pelican Legs & Webbed Feet (Vibrant Orange-Ochre Reptilian Scale Shading) -->
+      <linearGradient id="legOrangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#9e4216" />
+        <stop offset="28%" stop-color="#e87935" />
+        <stop offset="48%" stop-color="#ff9e54" />
+        <stop offset="75%" stop-color="#c95620" />
+        <stop offset="100%" stop-color="#7a2e0c" />
+      </linearGradient>
+
+      <linearGradient id="farLegOrangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6e2c0d" />
+        <stop offset="35%" stop-color="#b35420" />
+        <stop offset="70%" stop-color="#8c3b12" />
+        <stop offset="100%" stop-color="#521f06" />
+      </linearGradient>
+
+      <!-- Ground Shadow -->
+      <radialGradient id="groundShadowGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#090c10" stop-opacity="0.72" />
+        <stop offset="55%" stop-color="#11161d" stop-opacity="0.45" />
+        <stop offset="100%" stop-color="#1c222b" stop-opacity="0" />
+      </radialGradient>
+
+      <!-- Soft Drop Shadow Filter for Feather Layering -->
+      <filter id="featherShadow" x="-15%" y="-15%" width="130%" height="130%">
+        <feDropShadow dx="-1.5" dy="2.2" stdDeviation="2.2" flood-color="#2a3038" flood-opacity="0.32" />
+      </filter>
+
+      <filter id="deepShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="-2" dy="4" stdDeviation="3.5" flood-color="#11161c" flood-opacity="0.45" />
+      </filter>
+
+      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+
+    <!-- ==================== MAIN CAMERA VIEWPORT GROUP ==================== -->
+    <g id="camera-rig">
+      <!-- 1. BACKGROUND: SKY, SUN, OCEAN, DISTANT COASTLINE -->
+      <rect x="-400" y="-300" width="2400" height="1050" fill="url(#skyGrad)" />
+      <rect x="-400" y="-300" width="2400" height="1050" fill="url(#sunGlow)" />
+
+      <!-- Setting Sun Disc -->
+      <circle cx="1248" cy="525" r="78" fill="#fff6de" opacity="0.82" filter="url(#softGlow)" />
+
+      <!-- Distant Soft Clouds -->
+      <g id="clouds-layer" opacity="0.78">
+        <path d="M 120 260 Q 210 230 290 250 Q 370 220 460 255 Q 520 265 490 282 L 100 282 Z" fill="#e8c59e" opacity="0.35" />
+        <path d="M 780 190 Q 860 165 950 185 Q 1040 160 1130 195 Q 1190 202 1150 218 L 760 218 Z" fill="#f0cfa8" opacity="0.4" />
+        <path d="M 1180 340 Q 1280 318 1370 336 Q 1450 322 1520 348 L 1160 352 Z" fill="#f7d9b0" opacity="0.5" />
+      </g>
+
+      <!-- Distant Flocks of Sea Birds -->
+      <g id="distant-birds" stroke="#475563" stroke-width="1.6" fill="none" stroke-linecap="round">
+        <path d="M 320 210 Q 328 202 335 209 Q 342 202 350 210" />
+        <path d="M 358 196 Q 364 190 370 195 Q 376 190 382 196" />
+        <path d="M 305 224 Q 311 218 316 223 Q 321 218 327 224" />
+      </g>
+
+      <!-- Distant Headland Silhouette & Lighthouse -->
+      <path d="M -200 605 L -40 578 L 95 568 L 210 576 L 340 590 L 445 602 L 490 605 Z" fill="#2c3e4f" opacity="0.85" />
+      <!-- Tiny Lighthouse on Headland -->
+      <g transform="translate(425, 566)">
+        <polygon points="-4,36 -2,0 2,0 4,36" fill="#d9c8b4" />
+        <rect x="-3" y="-5" width="6" height="5" fill="#2b3540" />
+        <circle cx="0" cy="-3" r="3.5" fill="#AT" />
+        <circle id="lighthouse-beacon" cx="0" cy="-3" r="4" fill="#ffe799" filter="url(#softGlow)" />
+      </g>
+
+      <!-- Ocean Water Layer -->
+      <rect x="-400" y="604" width="2400" height="150" fill="url(#seaGrad)" />
+
+      <!-- Sun Shimmer on Ocean Water -->
+      <g id="ocean-shimmer" fill="#ffd996" opacity="0.55"></g>
+
+      <!-- Animated Ocean Waves & Rolling Surf -->
+      <g id="ocean-waves"></g>
+
+      <!-- 2. MIDGROUND: COASTAL SEAWALL PROMENADE & CYCLE PATH -->
+      <!-- Stone Seawall Parapet -->
+      <rect x="-400" y="732" width="2400" height="22" fill="url(#curbGrad)" />
+      <line x1="-400" y1="733" x2="2000" y2="733" stroke="#d8cfc2" stroke-width="1.5" opacity="0.7" />
+      <g id="seawall-blocks"></g>
+
+      <!-- Asphalt Cycle Path / Road -->
+      <rect x="-400" y="754" width="2400" height="320" fill="url(#roadGrad)" />
+      <line x1="-400" y1="754" x2="2000" y2="754" stroke="#1e2024" stroke-width="2.5" />
+
+      <!-- Scrolling Road Markings, Asphalt Pebbles & Coastal Grass Tufts -->
+      <g id="road-parallax"></g>
+
+      <!-- Dynamic Contact & Ambient Ground Shadows under Wheels & Pelican -->
+      <g id="ground-shadows">
+        <ellipse id="shadow-rear-wheel" cx="560" cy="864" rx="155" ry="14" fill="url(#groundShadowGrad)" />
+        <ellipse id="shadow-center-mass" cx="765" cy="868" rx="190" ry="20" fill="url(#groundShadowGrad)" />
+        <ellipse id="shadow-front-wheel" cx="980" cy="864" rx="155" ry="14" fill="url(#groundShadowGrad)" />
+      </g>
+
+      <!-- ==================== 3. MAIN RIG: PELICAN + BICYCLE ==================== -->
+      <g id="bike-pelican-rig">
+        <!-- LAYER A: FAR-SIDE PELICAN ANATOMY (Behind Bicycle Frame) -->
+        <!-- Far Leg (Left Leg) & Far Webbed Foot -->
+        <g id="far-leg-layer"></g>
+
+        <!-- Far Wing (Left Wing reaching to far handlebar grip) -->
+        <g id="far-wing-layer"></g>
+
+        <!-- Far Pedal & Far Crank Arm (Behind Bottom Bracket) -->
+        <g id="far-crank-layer"></g>
+
+        <!-- LAYER B: BICYCLE WHEELS (Rear & Front) -->
+        <g id="rear-wheel-group" transform="translate(560, 710)"></g>
+        <g id="front-wheel-group" transform="translate(980, 710)"></g>
+
+        <!-- LAYER C: BICYCLE FRAME, FORK, SADDLE, HANDLEBARS & DRIVETRAIN -->
+        <g id="bicycle-frame-layer"></g>
+        <g id="drivetrain-layer"></g>
+
+        <!-- LAYER D: PELICAN TORSO, TAIL, NECK, HEAD, BEAK & GULAR POUCH -->
+        <g id="pelican-body-layer"></g>
+        <g id="pelican-neck-head-layer"></g>
+
+        <!-- LAYER E: NEAR-SIDE PELICAN LEG, FOOT & NEAR CRANK/PEDAL -->
+        <g id="near-crank-layer"></g>
+        <g id="near-leg-layer"></g>
+
+        <!-- LAYER F: NEAR-SIDE PELICAN WING & NEAR HANDLEBAR GRIP -->
+        <g id="near-wing-layer"></g>
+      </g>
+
+      <!-- 4. FOREGROUND: FLOATING SEA SPRAY, FEATHER DOWN & FLYING FISH -->
+      <g id="foreground-effects"></g>
+    </g>
+  </svg>
+</div>
+
+<!-- HUD CONTROLS -->
+<div class="hud-panel">
+  <div class="hud-group">
+    <span class="hud-label">骑行踏频</span>
+    <input type="range" id="ctrl-speed" min="0.1" max="2.4" step="0.05" value="1.05" />
+    <span class="hud-val" id="val-speed">1.05x</span>
+  </div>
+  <div class="hud-group">
+    <span class="hud-label">海风强度</span>
+    <input type="range" id="ctrl-wind" min="0" max="2.5" step="0.05" value="1.1" />
+    <span class="hud-val" id="val-wind">1.1x</span>
+  </div>
+  <div class="hud-group">
+    <span class="hud-label">喉囊鱼重</span>
+    <input type="range" id="ctrl-pouch" min="0.2" max="2.0" step="0.05" value="1.0" />
+    <span class="hud-val" id="val-pouch">100%</span>
+  </div>
+  <button class="hud-btn" id="btn-fish">🐟 抛投海鱼入囊</button>
+  <button class="hud-btn" id="btn-zoom">🔍 细节特写视角</button>
+  <button class="hud-btn" id="btn-slowmo">⏱ 慢动作解剖观察</button>
+</div>
+
+<script>
+/**
+ * ============================================================================
+ * 写实白鹈鹕骑复古自行车 - 高精度 SVG 生成与逆运动学 (IK) 物理动画引擎
+ * ============================================================================
+ */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs = {}, parent = null) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    node.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(node);
+  return node;
+}
+
+// ==================== GEOMETRY & KINEMATICS CONFIGURATION ====================
+const BIKE = {
+  rearWheel:  { x: 560, y: 710, r: 148, tireR: 154 },
+  frontWheel: { x: 980, y: 710, r: 148, tireR: 154 },
+  bb:         { x: 735, y: 718 }, // Bottom Bracket (Crank axis)
+  seatCluster:{ x: 662, y: 505 }, // Top of seat tube
+  saddlePos:  { x: 642, y: 468 }, // Leather saddle center
+  headTop:    { x: 904, y: 492 }, // Top of head tube
+  headBottom: { x: 922, y: 545 }, // Bottom of head tube / fork crown
+  stemTop:    { x: 892, y: 432 }, // Quill stem top clamp
+  gripNear:   { x: 852, y: 446 }, // Near handlebar leather grip end
+  gripFar:    { x: 868, y: 428 }, // Far handlebar leather grip end
+  crankRadius: 68,
+  chainringR:  44,
+  cogR:        19
+};
+
+// Inverse Kinematics 2-Bone Solver (Hip -> Knee -> Ankle)
+// For avian anatomy: Hip -> Knee/Tibiotarsus joint (points forward-up) -> Ankle/Intertarsal joint (points backward-up) -> Foot on Pedal
+function solveTwoBoneIK(p1, p2, L1, L2, bendDir = 1) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  let d = Math.hypot(dx, dy);
+  const maxReach = (L1 + L2) * 0.996;
+  const minReach = Math.abs(L1 - L2) * 1.02;
+  d = Math.max(minReach, Math.min(maxReach, d));
+
+  const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+
+  const mx = p1.x + (a * dx) / d;
+  const my = p1.y + (a * dy) / d;
+
+  const jx = mx + (bendDir * h * (-dy)) / d;
+  const jy = my + (bendDir * h * (dx)) / d;
+
+  return { x: jx, y: jy };
+}
+
+// ==================== 1. BUILD PARALLAX ENVIRONMENT ====================
+const envState = {
+  shimmerBars: [],
+  seawallBlocks: [],
+  roadStripes: [],
+  pebbles: [],
+  grassTufts: [],
+  sprayParticles: []
+};
+
+function buildEnvironment() {
+  // Ocean sun shimmer
+  const shimmerGroup = document.getElementById("ocean-shimmer");
+  for (let i = 0; i < 38; i++) {
+    const y = 608 + Math.pow(i / 38, 1.35) * 118;
+    const spread = 55 + (i / 38) * 240;
+    const x = 1248 + (Math.sin(i * 7.3) * spread * 0.65);
+    const w = 18 + (i / 38) * 85 + (i % 5) * 12;
+    const h = 1.4 + (i / 38) * 2.4;
+    const rect = el("rect", {
+      x: x - w / 2,
+      y: y,
+      width: w,
+      height: h,
+      rx: h / 2,
+      fill: i % 3 === 0 ? "#fff2cc" : "#ffca7a",
+      opacity: 0.35 + (1 - i / 38) * 0.5
+    }, shimmerGroup);
+    envState.shimmerBars.push({ node: rect, baseX: x, baseW: w, phase: i * 0.85, speed: 1.5 + (i % 4) * 0.5 });
+  }
+
+  // Seawall stone blocks
+  const wallGroup = document.getElementById("seawall-blocks");
+  for (let i = 0; i < 24; i++) {
+    const x = -300 + i * 110;
+    const g = el("g", { transform: `translate(${x}, 732)` }, wallGroup);
+    el("line", { x1: 0, y1: 0, x2: 0, y2: 22, stroke: "#45423c", "stroke-width": 2 }, g);
+    el("line", { x1: 2, y1: 1, x2: 2, y2: 21, stroke: "#b5aea2", "stroke-width": 1, opacity: 0.45 }, g);
+    // Weathering moss/stain
+    if (i % 2 === 0) {
+      el("path", {
+        d: "M 18 22 Q 45 14 78 22 Z",
+        fill: "#4b5243",
+        opacity: 0.38
+      }, g);
+    }
+    envState.seawallBlocks.push({ node: g, x });
+  }
+
+  // Road dashes, pebbles, and seaside marram grass
+  const roadGroup = document.getElementById("road-parallax");
+
+  // Cycle lane aged white dashed line
+  for (let i = 0; i < 14; i++) {
+    const x = -300 + i * 190;
+    const dash = el("path", {
+      d: "M 0 0 L 95 0 L 90 7 L -5 7 Z",
+      fill: "#d9d2c5",
+      opacity: 0.48,
+      transform: `translate(${x}, 895)`
+    }, roadGroup);
+    envState.roadStripes.push({ node: dash, x });
+  }
+
+  // Fine asphalt texture pebbles & cracks
+  for (let i = 0; i < 65; i++) {
+    const x = -300 + (i * 39) % 2400;
+    const y = 762 + ((i * 73) % 210);
+    const r = 1.2 + (i % 4) * 0.85;
+    const c = el("ellipse", {
+      cx: 0, cy: 0, rx: r * 1.4, ry: r * 0.7,
+      fill: i % 3 === 0 ? "#666b73" : "#22252a",
+      opacity: 0.55,
+      transform: `translate(${x}, ${y})`
+    }, roadGroup);
+    envState.pebbles.push({ node: c, x, y, speedMult: 1.0 + (y - 760) / 600 });
+  }
+
+  // Coastal grass tufts along the seawall edge
+  for (let i = 0; i < 16; i++) {
+    const x = -250 + i * 165 + (i % 3) * 28;
+    const tuft = el("g", { transform: `translate(${x}, 755)` }, roadGroup);
+    const blades = [
+      { dx: -14, dy: -24, c: "#6b7852" },
+      { dx: -6, dy: -32, c: "#839165" },
+      { dx: 3, dy: -28, c: "#5b6945" },
+      { dx: 11, dy: -22, c: "#99a374" },
+      { dx: 16, dy: -16, c: "#74805b" }
+    ];
+    const bladeNodes = [];
+    blades.forEach((b) => {
+      const p = el("path", {
+        d: `M 0 0 Q ${b.dx * 0.4} ${b.dy * 0.6} ${b.dx} ${b.dy}`,
+        stroke: b.c,
+        "stroke-width": 2.1,
+        "stroke-linecap": "round",
+        fill: "none"
+      }, tuft);
+      bladeNodes.push({ node: p, dx: b.dx, dy: b.dy });
+    });
+    envState.grassTufts.push({ node: tuft, x, blades: bladeNodes, phase: i * 1.1 });
+  }
+}
+
+// ==================== 2. BUILD HIGH-PRECISION SPOKED WHEELS ====================
+function buildSpokedWheel(containerId) {
+  const root = document.getElementById(containerId);
+  const R = BIKE.rearWheel.r;       // 148
+  const tireR = BIKE.rearWheel.tireR; // 154
+  const rimInnerR = R - 13;         // 135
+  const hubFlangeR = 19;
+
+  // Rotating wheel group
+  const rotGroup = el("g", {}, root);
+
+  // 1. 36 Tangent-Laced Stainless Steel Spokes (3-cross pattern)
+  const spokesGroup = el("g", {}, rotGroup);
+  const numSpokes = 36;
+  for (let i = 0; i < numSpokes; i++) {
+    const baseAngle = (i / numSpokes) * Math.PI * 2;
+    // Tangent lacing offset (+ or - cross angle)
+    const crossDir = (i % 2 === 0) ? 1 : -1;
+    const hubAngle = baseAngle + crossDir * 1.18;
+    const x1 = Math.cos(hubAngle) * hubFlangeR;
+    const y1 = Math.sin(hubAngle) * hubFlangeR;
+    const x2 = Math.cos(baseAngle) * rimInnerR;
+    const y2 = Math.sin(baseAngle) * rimInnerR;
+
+    // Spoke shaft
+    el("line", {
+      x1, y1, x2, y2,
+      stroke: i % 2 === 0 ? "#d2dae2" : "#959fa8",
+      "stroke-width": i % 2 === 0 ? "1.25" : "1.05",
+      opacity: i % 2 === 0 ? "0.88" : "0.68"
+    }, spokesGroup);
+
+    // Brass spoke nipple at rim inner wall
+    const nx1 = Math.cos(baseAngle) * (rimInnerR - 4.5);
+    const ny1 = Math.sin(baseAngle) * (rimInnerR - 4.5);
+    el("line", {
+      x1: nx1, y1: ny1, x2, y2,
+      stroke: "#d9b36c",
+      "stroke-width": "2.3",
+      "stroke-linecap": "round"
+    }, spokesGroup);
+  }
+
+  // 2. Presta Brass Tire Valve & Cap
+  const valveAngle = 0.65;
+  const vx1 = Math.cos(valveAngle) * (rimInnerR - 16);
+  const vy1 = Math.sin(valveAngle) * (rimInnerR - 16);
+  const vx2 = Math.cos(valveAngle) * rimInnerR;
+  const vy2 = Math.sin(valveAngle) * rimInnerR;
+  el("line", {
+    x1: vx1, y1: vy1, x2: vx2, y2: vy2,
+    stroke: "#d4af5f", "stroke-width": "3.2", "stroke-linecap": "round"
+  }, rotGroup);
+
+  // 3. Multi-layered Rim & Gumwall Clincher Tire
+  // Outer dark rubber tread with fine tread blocks
+  el("circle", {
+    cx: 0, cy: 0, r: R + 2,
+    fill: "none",
+    stroke: "#1c1e22",
+    "stroke-width": "12"
+  }, rotGroup);
+
+  // Tire tread micro-ribs (rotating dashed ring)
+  el("circle", {
+    cx: 0, cy: 0, r: R + 7.2,
+    fill: "none",
+    stroke: "#2d3036",
+    "stroke-width": "2.2",
+    "stroke-dasharray": "4 5"
+  }, rotGroup);
+
+  // Classic Gumwall / Tan Sidewall strip
+  el("circle", {
+    cx: 0, cy: 0, r: R - 2.2,
+    fill: "none",
+    stroke: "#c9975b",
+    "stroke-width": "4.2",
+    opacity: "0.9"
+  }, rotGroup);
+
+  // Polished Aluminum Box-Section Rim
+  el("circle", {
+    cx: 0, cy: 0, r: R - 7.5,
+    fill: "none",
+    stroke: "#ced5dd",
+    "stroke-width": "6.5"
+  }, rotGroup);
+  el("circle", {
+    cx: 0, cy: 0, r: R - 5.2,
+    fill: "none",
+    stroke: "#6c747d",
+    "stroke-width": "1.2"
+  }, rotGroup);
+  el("circle", {
+    cx: 0, cy: 0, r: rimInnerR,
+    fill: "none",
+    stroke: "#ffffff",
+    "stroke-width": "1.3",
+    opacity: "0.8"
+  }, rotGroup);
+
+  // 4. Hub Flange & Bearings
+  el("circle", {
+    cx: 0, cy: 0, r: hubFlangeR + 2,
+    fill: "url(#hubChrome)",
+    stroke: "#4d545c",
+    "stroke-width": "1.5"
+  }, rotGroup);
+
+  // Flange lightening holes
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    el("circle", {
+      cx: Math.cos(a) * 12.5,
+      cy: Math.sin(a) * 12.5,
+      r: 2.3,
+      fill: "#262b30"
+    }, rotGroup);
+  }
+
+  // Non-rotating Specular Rim Highlight & Hub Axle Nut
+  el("path", {
+    d: `M ${-R * 0.72} ${-R * 0.65} A ${R - 7} ${R - 7} 0 0 1 ${R * 0.72} ${-R * 0.65}`,
+    fill: "none",
+    stroke: "#ffffff",
+    "stroke-width": "2.2",
+    opacity: "0.45",
+    "stroke-linecap": "round"
+  }, root);
+
+  el("circle", {
+    cx: 0, cy: 0, r: 7.5,
+    fill: "url(#hubChrome)",
+    stroke: "#2d3238",
+    "stroke-width": "1.5"
+  }, root);
+
+  return rotGroup;
+}
+
+// ==================== 3. BUILD VINTAGE LUGGED STEEL BICYCLE FRAME ====================
+function buildBicycleFrame() {
+  const layer = document.getElementById("bicycle-frame-layer");
+  const { rearWheel, frontWheel, bb, seatCluster, saddlePos, headTop, headBottom, stemTop, gripNear, gripFar } = BIKE;
+
+  // Far-side chainstay & seatstay (slightly darker, offset for 3D depth)
+  el("line", {
+    x1: bb.x, y1: bb.y - 3, x2: rearWheel.x, y2: rearWheel.y - 5,
+    stroke: "#092119", "stroke-width": "9", "stroke-linecap": "round"
+  }, layer);
+  el("line", {
+    x1: seatCluster.x - 3, y1: seatCluster.y + 8, x2: rearWheel.x, y2: rearWheel.y - 5,
+    stroke: "#092119", "stroke-width": "7.5", "stroke-linecap": "round"
+  }, layer);
+
+  // Far fork blade
+  el("path", {
+    d: `M ${headBottom.x + 2} ${headBottom.y - 2} Q ${headBottom.x + 19} ${headBottom.y + 88} ${frontWheel.x + 3} ${frontWheel.y - 4}`,
+    fill: "none", stroke: "#0a241b", "stroke-width": "11", "stroke-linecap": "round"
+  }, layer);
+
+  // Rear & Front Chrome Fenders (Mudguards) with stays
+  const renderFender = (wx, wy, startDeg, endDeg) => {
+    const rF = BIKE.rearWheel.tireR + 10;
+    const a1 = (startDeg * Math.PI) / 180;
+    const a2 = (endDeg * Math.PI) / 180;
+    const x1 = wx + Math.cos(a1) * rF;
+    const y1 = wy + Math.sin(a1) * rF;
+    const x2 = wx + Math.cos(a2) * rF;
+    const y2 = wy + Math.sin(a2) * rF;
+
+    // Fender stay wire
+    const midA = ((startDeg + 25) * Math.PI) / 180;
+    el("line", {
+      x1: wx, y1: wy,
+      x2: wx + Math.cos(midA) * (rF + 2),
+      y2: wy + Math.sin(midA) * (rF + 2),
+      stroke: "#b5bec7", "stroke-width": "2.2"
+    }, layer);
+
+    // Chrome fender arc
+    el("path", {
+      d: `M ${x1} ${y1} A ${rF} ${rF} 0 0 1 ${x2} ${y2}`,
+      fill: "none", stroke: "url(#chromeGrad)", "stroke-width": "8.5", "stroke-linecap": "round"
+    }, layer);
+    el("path", {
+      d: `M ${x1} ${y1} A ${rF} ${rF} 0 0 1 ${x2} ${y2}`,
+      fill: "none", stroke: "#283038", "stroke-width": "1.2", "stroke-linecap": "round"
+    }, layer);
+  };
+
+  renderFender(rearWheel.x, rearWheel.y, 172, 315);
+  renderFender(frontWheel.x, frontWheel.y, 195, 325);
+
+  // Main Diamond Frame Tubes (British Racing Green Enamel)
+  // Down Tube
+  el("line", {
+    x1: bb.x, y1: bb.y, x2: headBottom.x - 4, y2: headBottom.y - 6,
+    stroke: "url(#frameTubeGrad)", "stroke-width": "16.5", "stroke-linecap": "round"
+  }, layer);
+
+  // Seat Tube
+  el("line", {
+    x1: bb.x, y1: bb.y, x2: seatCluster.x, y2: seatCluster.y,
+    stroke: "url(#frameTubeVert)", "stroke-width": "16", "stroke-linecap": "round"
+  }, layer);
+
+  // Top Tube
+  el("line", {
+    x1: seatCluster.x, y1: seatCluster.y, x2: headTop.x, y2: headTop.y,
+    stroke: "url(#frameTubeGrad)", "stroke-width": "14.5", "stroke-linecap": "round"
+  }, layer);
+
+  // Near Chainstay (tapered with chrome dropout end)
+  el("line", {
+    x1: bb.x, y1: bb.y, x2: rearWheel.x, y2: rearWheel.y,
+    stroke: "url(#frameTubeGrad)", "stroke-width": "11", "stroke-linecap": "round"
+  }, layer);
+  el("line", {
+    x1: rearWheel.x + 48, y1: rearWheel.y + 2, x2: rearWheel.x, y2: rearWheel.y,
+    stroke: "url(#chromeGrad)", "stroke-width": "10.5", "stroke-linecap": "round"
+  }, layer);
+
+  // Near Seatstay
+  el("line", {
+    x1: seatCluster.x, y1: seatCluster.y + 6, x2: rearWheel.x, y2: rearWheel.y,
+    stroke: "url(#frameTubeVert)", "stroke-width": "9", "stroke-linecap": "round"
+  }, layer);
+
+  // Head Tube
+  el("line", {
+    x1: headTop.x, y1: headTop.y - 5, x2: headBottom.x, y2: headBottom.y + 4,
+    stroke: "url(#frameTubeVert)", "stroke-width": "18.5", "stroke-linecap": "round"
+  }, layer);
+
+  // Decorative Gold/Brass Ornate Lugs at Frame Joints
+  const drawLugRing = (cx, cy, r = 10) => {
+    el("circle", {
+      cx, cy, r,
+      fill: "none",
+      stroke: "url(#brassLugGrad)",
+      "stroke-width": "3.2"
+    }, layer);
+  };
+  drawLugRing(seatCluster.x, seatCluster.y, 10.5);
+  drawLugRing(headTop.x, headTop.y, 11);
+  drawLugRing(headBottom.x, headBottom.y, 11);
+  drawLugRing(bb.x, bb.y, 14);
+
+  // Gold Pinstripe Decal & Vintage Brass Headbadge on Down Tube
+  el("line", {
+    x1: bb.x + 38, y1: bb.y - 34, x2: headBottom.x - 42, y2: headBottom.y + 28,
+    stroke: "url(#brassLugGrad)", "stroke-width": "2", opacity: "0.85"
+  }, layer);
+
+  // Front Curved Steel Fork Blade (with Chrome Lower Socks & Brass Fork Crown)
+  el("path", {
+    d: `M ${headBottom.x} ${headBottom.y} Q ${headBottom.x + 16} ${headBottom.y + 92} ${frontWheel.x} ${frontWheel.y}`,
+    fill: "none", stroke: "url(#frameTubeVert)", "stroke-width": "13", "stroke-linecap": "round"
+  }, layer);
+  // Chrome fork tip
+  el("path", {
+    d: `M ${headBottom.x + 28} ${headBottom.y + 95} Q ${headBottom.x + 36} ${headBottom.y + 132} ${frontWheel.x} ${frontWheel.y}`,
+    fill: "none", stroke: "url(#chromeHoriz)", "stroke-width": "11.5", "stroke-linecap": "round"
+  }, layer);
+  // Brass Fork Crown
+  el("rect", {
+    x: headBottom.x - 10, y: headBottom.y - 4,
+    width: 20, height: 12, rx: 4,
+    fill: "url(#brassLugGrad)", stroke: "#4f370c", "stroke-width": "1.2",
+    transform: `rotate(-18 ${headBottom.x} ${headBottom.y})`
+  }, layer);
+
+  // Chrome Headset & Quill Stem
+  el("line", {
+    x1: headTop.x, y1: headTop.y - 6, x2: stemTop.x, y2: stemTop.y,
+    stroke: "url(#chromeHoriz)", "stroke-width": "11", "stroke-linecap": "round"
+  }, layer);
+  // Stem forward extension
+  el("path", {
+    d: `M ${stemTop.x} ${stemTop.y} L ${stemTop.x + 28} ${stemTop.y - 6}`,
+    stroke: "url(#chromeGrad)", "stroke-width": "12", "stroke-linecap": "round"
+  }, layer);
+
+  // Far Handlebar Bend & Far Leather Grip
+  el("path", {
+    d: `M ${stemTop.x + 26} ${stemTop.y - 6} C ${stemTop.x + 35} ${stemTop.y - 18}, ${gripFar.x + 35} ${gripFar.y - 8}, ${gripFar.x} ${gripFar.y}`,
+    fill: "none", stroke: "#8f98a1", "stroke-width": "9.5", "stroke-linecap": "round"
+  }, layer);
+  el("line", {
+    x1: gripFar.x + 28, y1: gripFar.y - 4, x2: gripFar.x - 10, y2: gripFar.y + 2,
+    stroke: "#5e3110", "stroke-width": "13", "stroke-linecap": "round"
+  }, layer);
+
+  // Bowed Bowden Brake Cables (Front & Rear)
+  el("path", {
+    d: `M ${gripNear.x + 36} ${gripNear.y + 6} C ${headTop.x + 58} ${headTop.y - 30}, ${headBottom.x + 42} ${headBottom.y - 12}, ${headBottom.x + 12} ${headBottom.y + 18}`,
+    fill: "none", stroke: "#282c30", "stroke-width": "2.6"
+  }, layer);
+  el("path", {
+    d: `M ${gripNear.x + 36} ${gripNear.y + 6} C ${headTop.x + 45} ${headTop.y + 15}, ${headTop.x + 10} ${headTop.y + 5}, ${seatCluster.x + 12} ${seatCluster.y + 4}`,
+    fill: "none", stroke: "#282c30", "stroke-width": "2.4"
+  }, layer);
+
+  // Near Swept-Back North-Road / Cruiser Chrome Handlebar & Stitched Leather Grip
+  el("path", {
+    d: `M ${stemTop.x + 28} ${stemTop.y - 6} C ${stemTop.x + 42} ${stemTop.y + 12}, ${gripNear.x + 45} ${gripNear.y - 4}, ${gripNear.x} ${gripNear.y}`,
+    fill: "none", stroke: "url(#chromeGrad)", "stroke-width": "11", "stroke-linecap": "round"
+  }, layer);
+  // Brake lever
+  el("path", {
+    d: `M ${gripNear.x + 32} ${gripNear.y - 2} L ${gripNear.x + 54} ${gripNear.y + 14}`,
+    stroke: "url(#chromeGrad)", "stroke-width": "4.5", "stroke-linecap": "round"
+  }, layer);
+  // Near Honey-Brown Leather Grip with brass ferrules
+  el("line", {
+    x1: gripNear.x + 26, y1: gripNear.y - 2, x2: gripNear.x - 16, y2: gripNear.y + 3,
+    stroke: "url(#leatherGrad)", "stroke-width": "15.5", "stroke-linecap": "round"
+  }, layer);
+  el("circle", { cx: gripNear.x - 16, cy: gripNear.y + 3, r: 7.5, fill: "url(#brassLugGrad)" }, layer);
+
+  // Fluted Chrome Seatpost & Brooks-Style Sprung Leather Saddle (Animated with weight bounce)
+  el("line", {
+    x1: seatCluster.x, y1: seatCluster.y, x2: saddlePos.x + 10, y2: saddlePos.y + 10,
+    stroke: "url(#chromeHoriz)", "stroke-width": "11.5", "stroke-linecap": "round"
+  }, layer);
+
+  const saddleGroup = el("g", { id: "saddle-group", transform: `translate(${saddlePos.x}, ${saddlePos.y})` }, layer);
+  // Chrome saddle rails & twin rear coil springs
+  el("path", {
+    d: "M -34 18 L 36 12",
+    stroke: "url(#chromeGrad)", "stroke-width": "4.2", "stroke-linecap": "round"
+  }, saddleGroup);
+  // Coil spring rings
+  for (let s = 0; s < 5; s++) {
+    el("ellipse", {
+      cx: -30, cy: 5 + s * 3.5, rx: 8.5, ry: 2.3,
+      fill: "none", stroke: "url(#chromeGrad)", "stroke-width": "2.2"
+    }, saddleGroup);
+  }
+  // Sculpted Leather Saddle Body
+  el("path", {
+    d: "M -48 -4 C -46 -16, -15 -14, 14 -8 C 35 -4, 52 -5, 56 2 C 58 8, 42 12, 22 10 C 0 8, -18 16, -38 14 C -47 12, -50 3, -48 -4 Z",
+    fill: "url(#leatherGrad)",
+    stroke: "#2e1503",
+    "stroke-width": "1.6"
+  }, saddleGroup);
+  // Copper Rivets on Leather Saddle
+  [[-38, -2], [-35, 5], [-30, 10], [44, 1]].forEach(([rx, ry]) => {
+    el("circle", { cx: rx, cy: ry, r: 2.3, fill: "url(#brassLugGrad)" }, saddleGroup);
+  });
+}
+
+// ==================== 4. BUILD DRIVETRAIN (CHAIN, CHAINRING, DERAILLEUR, CRANKS) ====================
+let chainPathUpper, chainPathLower, chainringRotGroup, rearDerailleurGroup;
+let nearCrankGroup, nearPedalGroup, farCrankGroup, farPedalGroup;
+
+function buildDrivetrain() {
+  const layer = document.getElementById("drivetrain-layer");
+  const { rearWheel, bb, chainringR, cogR } = BIKE;
+
+  // Rear Cassette Cogs
+  for (let r of [24, 20, 16, 12]) {
+    el("circle", {
+      cx: rearWheel.x, cy: rearWheel.y, r,
+      fill: "none", stroke: "#8d969f", "stroke-width": "2.4",
+      "stroke-dasharray": "3.2 2.4"
+    }, layer);
+  }
+
+  // Vintage Chrome Rear Derailleur & Jockey Wheels
+  rearDerailleurGroup = el("g", { transform: `translate(${rearWheel.x}, ${rearWheel.y})` }, layer);
+  el("path", {
+    d: "M 0 0 L -8 24 L 6 46",
+    fill: "none", stroke: "url(#chromeGrad)", "stroke-width": "6.5", "stroke-linecap": "round", "stroke-linejoin": "round"
+  }, rearDerailleurGroup);
+  el("circle", { cx: -7, cy: 24, r: 8.5, fill: "#2b3036", stroke: "#aeb7c0", "stroke-width": "2" }, rearDerailleurGroup);
+  el("circle", { cx: 6, cy: 46, r: 9.5, fill: "#2b3036", stroke: "#aeb7c0", "stroke-width": "2" }, rearDerailleurGroup);
+
+  // Roller Chain Upper & Lower Spans (Animated dashoffset)
+  const upperY1 = rearWheel.y - cogR;
+  const upperY2 = bb.y - chainringR;
+  const lowerY1 = rearWheel.y + 46; // from lower jockey wheel
+  const lowerY2 = bb.y + chainringR;
+
+  // Underlying dark chain plate line
+  el("path", {
+    d: `M ${rearWheel.x} ${upperY1} L ${bb.x} ${upperY2} A ${chainringR} ${chainringR} 0 0 1 ${bb.x} ${lowerY2} L ${rearWheel.x + 6} ${lowerY1} L ${rearWheel.x - 8} ${rearWheel.y + 24} L ${rearWheel.x - cogR} ${rearWheel.y}`,
+    fill: "none", stroke: "#25292e", "stroke-width": "5.5", "stroke-linejoin": "round"
+  }, layer);
+
+  // Moving metallic chain links overlay
+  chainPathUpper = el("path", {
+    d: `M ${rearWheel.x} ${upperY1} L ${bb.x} ${upperY2} A ${chainringR} ${chainringR} 0 0 1 ${bb.x} ${lowerY2} L ${rearWheel.x + 6} ${lowerY1}`,
+    fill: "none", stroke: "#c4ccd4", "stroke-width": "4.2",
+    "stroke-dasharray": "6 5",
+    "stroke-linecap": "round"
+  }, layer);
+
+  // Ornate 5-Arm Alloy Chainring at Bottom Bracket
+  chainringRotGroup = el("g", { transform: `translate(${bb.x}, ${bb.y})` }, layer);
+
+  // Outer teeth ring
+  const numTeeth = 42;
+  let teethD = "";
+  for (let i = 0; i < numTeeth; i++) {
+    const a1 = (i / numTeeth) * Math.PI * 2;
+    const a2 = ((i + 0.5) / numTeeth) * Math.PI * 2;
+    const rOut = chainringR + 3.5;
+    const rIn = chainringR - 1.5;
+    const x1 = Math.cos(a1) * rOut;
+    const y1 = Math.sin(a1) * rOut;
+    const x2 = Math.cos(a2) * rIn;
+    const y2 = Math.sin(a2) * rIn;
+    teethD += (i === 0 ? `M ${x1} ${y1}` : ` L ${x1} ${y1}`) + ` L ${x2} ${y2}`;
+  }
+  teethD += " Z";
+  el("path", {
+    d: teethD,
+    fill: "none", stroke: "#b8c1ca", "stroke-width": "2.5"
+  }, chainringRotGroup);
+
+  // Chainring body ring
+  el("circle", {
+    cx: 0, cy: 0, r: chainringR - 4,
+    fill: "none", stroke: "url(#chromeGrad)", "stroke-width": "7.5"
+  }, chainringRotGroup);
+
+  // 5 Spider Arms with Chainring Bolts
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const x2 = Math.cos(a) * (chainringR - 5);
+    const y2 = Math.sin(a) * (chainringR - 5);
+    el("line", {
+      x1: 0, y1: 0, x2, y2,
+      stroke: "url(#chromeGrad)", "stroke-width": "7.5", "stroke-linecap": "round"
+    }, chainringRotGroup);
+    el("circle", {
+      cx: Math.cos(a) * (chainringR - 8),
+      cy: Math.sin(a) * (chainringR - 8),
+      r: 2.6, fill: "#383f47", stroke: "#ffffff", "stroke-width": "0.9"
+    }, chainringRotGroup);
+  }
+
+  // Far Crank Arm & Far Pedal (In #far-crank-layer)
+  const farLayer = document.getElementById("far-crank-layer");
+  farCrankGroup = el("g", {}, farLayer);
+  el("line", {
+    id: "far-crank-line",
+    x1: bb.x, y1: bb.y, x2: bb.x, y2: bb.y - BIKE.crankRadius,
+    stroke: "#727b84", "stroke-width": "11", "stroke-linecap": "round"
+  }, farCrankGroup);
+  farPedalGroup = el("g", {}, farLayer);
+  el("rect", {
+    x: -22, y: -5, width: 44, height: 10, rx: 3,
+    fill: "#3b4046", stroke: "#8f98a2", "stroke-width": "1.8"
+  }, farPedalGroup);
+
+  // Near Crank Arm & Near Classic Quill/Platform Pedal (In #near-crank-layer)
+  const nearLayer = document.getElementById("near-crank-layer");
+  nearCrankGroup = el("g", {}, nearLayer);
+  el("line", {
+    id: "near-crank-line",
+    x1: bb.x, y1: bb.y, x2: bb.x, y2: bb.y + BIKE.crankRadius,
+    stroke: "url(#chromeGrad)", "stroke-width": "12.5", "stroke-linecap": "round"
+  }, nearCrankGroup);
+  el("line", {
+    id: "near-crank-flute",
+    x1: bb.x, y1: bb.y, x2: bb.x, y2: bb.y + BIKE.crankRadius,
+    stroke: "#485058", "stroke-width": "3", "stroke-linecap": "round"
+  }, nearCrankGroup);
+  el("circle", {
+    cx: bb.x, cy: bb.y, r: 10.5,
+    fill: "url(#hubChrome)", stroke: "#3c434a", "stroke-width": "1.5"
+  }, nearCrankGroup);
+
+  nearPedalGroup = el("g", {}, nearLayer);
+  // Vintage serrated alloy & amber reflector platform pedal
+  el("rect", {
+    x: -25, y: -6, width: 50, height: 12, rx: 3.5,
+    fill: "#272c32", stroke: "url(#chromeGrad)", "stroke-width": "2.4"
+  }, nearPedalGroup);
+  // Amber pedal reflectors
+  el("rect", { x: -16, y: -2.2, width: 11, height: 4.4, rx: 1, fill: "#f0932b" }, nearPedalGroup);
+  el("rect", { x: 5, y: -2.2, width: 11, height: 4.4, rx: 1, fill: "#f0932b" }, nearPedalGroup);
+  el("circle", { cx: 0, cy: 0, r: 4.5, fill: "url(#hubChrome)" }, nearPedalGroup);
+}
+
+// ==================== 5. BUILD REALISTIC MULTI-LAYERED PELICAN ANATOMY ====================
+// Helper to create an individual detailed feather with rachis (shaft) & barb notches
+function createDetailedFeather(parent, { x, y, len, wid, angle, fill, stroke = "#c9bfb0", shaftColor = "#ffffff", isDark = false }) {
+  const g = el("g", { transform: `translate(${x}, ${y}) rotate(${angle})` }, parent);
+  // Feather vane shape with subtle barb notch
+  const d = `M 0 0
+             C ${len * 0.25} ${-wid * 0.62}, ${len * 0.72} ${-wid * 0.58}, ${len} 0
+             C ${len * 0.75} ${wid * 0.54}, ${len * 0.28} ${wid * 0.58}, 0 0 Z`;
+  el("path", {
+    d,
+    fill,
+    stroke,
+    "stroke-width": isDark ? "0.7" : "0.8"
+  }, g);
+  // Central Feather Shaft (Rachis)
+  el("path", {
+    d: `M 2 0 Q ${len * 0.5} ${-wid * 0.05} ${len * 0.94} 0`,
+    fill: "none",
+    stroke: shaftColor,
+    "stroke-width": isDark ? "1.1" : "1.2",
+    opacity: isDark ? "0.45" : "0.75"
+  }, g);
+  return g;
+}
+
+const pelicanRig = {};
+
+function buildPelicanAnatomy() {
+  // ---------------- A. FAR WING (Reaching to Far Handlebar Grip) ----------------
+  const farWingRoot = document.getElementById("far-wing-layer");
+  pelicanRig.farWing = el("g", {}, farWingRoot);
+  // Far wing base structure (populated and oriented dynamically in animation loop)
+  pelicanRig.farWingUpper = el("path", {
+    fill: "url(#farWingGrad)", stroke: "#9e968c", "stroke-width": "1.5"
+  }, pelicanRig.farWing);
+  pelicanRig.farWingPrimaries = el("path", {
+    fill: "#20242b", stroke: "#101317", "stroke-width": "1.2"
+  }, pelicanRig.farWing);
+
+  // ---------------- B. FAR LEG & WEBBED FOOT ----------------
+  const farLegRoot = document.getElementById("far-leg-layer");
+  pelicanRig.farThighFeather = el("path", {
+    fill: "url(#farWingGrad)", stroke: "#9e968b", "stroke-width": "1.4"
+  }, farLegRoot);
+  pelicanRig.farTarsus = el("path", {
+    fill: "none", stroke: "url(#farLegOrangeGrad)", "stroke-width": "13.5", "stroke-linecap": "round", "stroke-linejoin": "round"
+  }, farLegRoot);
+  pelicanRig.farFoot = el("path", {
+    fill: "url(#farLegOrangeGrad)", stroke: "#5c2208", "stroke-width": "1.4"
+  }, farLegRoot);
+
+  // ---------------- C. PELICAN TORSO, TAIL & LAYERED CONTOUR PLUMAGE ----------------
+  const bodyLayer = document.getElementById("pelican-body-layer");
+  pelicanRig.torsoGroup = el("g", { filter: "url(#featherShadow)" }, bodyLayer);
+
+  // 1. Tail Feathers (Short fanned rectrices behind the leather saddle)
+  pelicanRig.tailGroup = el("g", { transform: "translate(592, 438)" }, pelicanRig.torsoGroup);
+  for (let t = -3; t <= 3; t++) {
+    createDetailedFeather(pelicanRig.tailGroup, {
+      x: 0, y: t * 3.5,
+      len: 76 - Math.abs(t) * 4,
+      wid: 18,
+      angle: 162 + t * 6.5,
+      fill: "url(#featherSingleGrad)",
+      stroke: "#b5aba0"
+    });
+  }
+
+  // 2. Main Torso Mass (Sculpted volumetric bird body seated upright-forward on saddle)
+  el("path", {
+    d: `M 605 432
+        C 578 395, 595 322, 655 292
+        C 705 268, 768 278, 796 324
+        C 824 370, 804 434, 756 460
+        C 712 484, 634 468, 605 432 Z`,
+    fill: "url(#plumageBodyGrad)",
+    stroke: "#c4bab0",
+    "stroke-width": "1.5"
+  }, pelicanRig.torsoGroup);
+
+  // 3. Golden-Ochre Breeding Breast Patch (Characteristic of Great White Pelican)
+  el("path", {
+    d: `M 754 298
+        C 796 322, 815 375, 788 424
+        C 766 445, 738 420, 742 365
+        C 745 330, 742 308, 754 298 Z`,
+    fill: "url(#featherWarmBreast)",
+    opacity: "0.88"
+  }, pelicanRig.torsoGroup);
+
+  // 4. Layered Individual Contour Feathers across Back, Flank & Breast
+  const contourRows = [
+    // Back / Scapular rows
+    { cx: 642, cy: 318, count: 6, stepX: 16, stepY: 11, len: 52, wid: 20, baseAngle: 168 },
+    { cx: 632, cy: 344, count: 7, stepX: 16, stepY: 10, len: 56, wid: 22, baseAngle: 164 },
+    { cx: 622, cy: 372, count: 7, stepX: 17, stepY: 9,  len: 58, wid: 22, baseAngle: 158 },
+    { cx: 618, cy: 400, count: 6, stepX: 17, stepY: 8,  len: 54, wid: 21, baseAngle: 154 },
+    // Lower Belly / Flank fluff
+    { cx: 636, cy: 428, count: 5, stepX: 18, stepY: 5,  len: 46, wid: 19, baseAngle: 148 }
+  ];
+
+  contourRows.forEach((row) => {
+    for (let i = row.count - 1; i >= 0; i--) {
+      createDetailedFeather(pelicanRig.torsoGroup, {
+        x: row.cx + i * row.stepX,
+        y: row.cy + i * row.stepY,
+        len: row.len,
+        wid: row.wid,
+        angle: row.baseAngle - i * 2.5,
+        fill: "url(#featherSingleGrad)",
+        stroke: "#bfb5a6"
+      });
+    }
+  });
+
+  // Golden breast feather tufts fluttering in the wind
+  pelicanRig.breastTufts = [];
+  for (let b = 0; b < 7; b++) {
+    const bx = 772 + (b % 2) * 12;
+    const by = 322 + b * 15;
+    const f = createDetailedFeather(pelicanRig.torsoGroup, {
+      x: bx, y: by,
+      len: 36 + (b % 3) * 5,
+      wid: 13,
+      angle: 65 + b * 6,
+      fill: "url(#featherWarmBreast)",
+      stroke: "#cfa361",
+      shaftColor: "#fff7e0"
+    });
+    pelicanRig.breastTufts.push({ node: f, bx, by, baseAngle: 65 + b * 6, phase: b * 0.7 });
+  }
+
+  // ---------------- D. DYNAMIC S-CURVED NECK, HEAD, CREST, BEAK & GULAR POUCH ----------------
+  const neckHeadLayer = document.getElementById("pelican-neck-head-layer");
+
+  // S-Curved Muscular Neck Envelope (Deformed dynamically between chest & head)
+  pelicanRig.neckPath = el("path", {
+    fill: "url(#plumageBodyGrad)",
+    stroke: "#bfb5a8",
+    "stroke-width": "1.6",
+    filter: "url(#featherShadow)"
+  }, neckHeadLayer);
+
+  // Fine neck feather texture lines along the curve
+  pelicanRig.neckFeatherLines = el("path", {
+    fill: "none",
+    stroke: "#d4cabd",
+    "stroke-width": "1.4",
+    "stroke-linecap": "round"
+  }, neckHeadLayer);
+
+  // Head & Bill Master Group
+  pelicanRig.headGroup = el("g", {}, neckHeadLayer);
+
+  // 1. Occipital Nuchal Crest Feathers (Fluttering at back of head)
+  pelicanRig.crestFeathers = [];
+  const crestGroup = el("g", {}, pelicanRig.headGroup);
+  const crestSpecs = [
+    { x: -24, y: -18, len: 42, wid: 10, ang: 196 },
+    { x: -28, y: -12, len: 48, wid: 11, ang: 186 },
+    { x: -30, y: -5,  len: 45, wid: 10, ang: 175 },
+    { x: -28, y: 3,   len: 38, wid: 9,  ang: 166 },
+    { x: -25, y: 10,  len: 32, wid: 8,  ang: 158 }
+  ];
+  crestSpecs.forEach((c, idx) => {
+    const cf = createDetailedFeather(crestGroup, {
+      x: c.x, y: c.y, len: c.len, wid: c.wid, angle: c.ang,
+      fill: "url(#featherWarmBreast)", stroke: "#c4a36e"
+    });
+    pelicanRig.crestFeathers.push({ node: cf, ...c, phase: idx * 0.8 });
+  });
+
+  // 2. Gular Pouch (Translucent Rosy-Amber Throat Sac with Subsurface Vascular Veins & Physics)
+  // Built inside headGroup so it attaches seamlessly to the lower mandible from chin (8, 12) to beak tip (218, 16)
+  pelicanRig.pouchPath = el("path", {
+    fill: "url(#pouchSubsurfaceGrad)",
+    stroke: "#8f321e",
+    "stroke-width": "1.6"
+  }, pelicanRig.headGroup);
+
+  // Translucent Inner Fish Silhouette inside the Gular Pouch (when fish is caught!)
+  pelicanRig.pouchFishSilhouette = el("path", {
+    d: "M 65 44 C 85 34, 112 36, 128 48 C 136 42, 145 38, 148 36 L 144 50 L 149 60 C 142 57, 135 53, 128 52 C 110 62, 82 60, 65 44 Z",
+    fill: "#592218",
+    opacity: "0.35",
+    filter: "url(#softGlow)"
+  }, pelicanRig.headGroup);
+
+  // Delicate Subsurface Vascular Veins & Skin Folds on Gular Pouch
+  pelicanRig.pouchVeinsPath = el("path", {
+    fill: "none",
+    stroke: "#9e2c19",
+    "stroke-width": "1.1",
+    opacity: "0.52",
+    "stroke-linecap": "round"
+  }, pelicanRig.headGroup);
+
+  pelicanRig.pouchHighlightPath = el("path", {
+    fill: "none",
+    stroke: "#ffe8b8",
+    "stroke-width": "2.2",
+    opacity: "0.42",
+    "stroke-linecap": "round"
+  }, pelicanRig.headGroup);
+
+  // 3. Lower Mandible Frame (Thin flexible mandibular rami supporting the pouch)
+  pelicanRig.lowerMandible = el("path", {
+    d: "M 10 10 Q 115 16 218 14 Q 115 21 8 16 Z",
+    fill: "url(#pouchRimGrad)",
+    stroke: "#632415",
+    "stroke-width": "1.1"
+  }, pelicanRig.headGroup);
+
+  // 4. Cranium / Head Feathered Contour
+  el("path", {
+    d: "M -32 8 C -36 -14, -18 -30, 8 -28 C 28 -27, 42 -16, 52 -6 C 36 8, 14 14, -10 15 C -24 15, -30 12, -32 8 Z",
+    fill: "url(#plumageBodyGrad)",
+    stroke: "#bfb5a8",
+    "stroke-width": "1.4"
+  }, pelicanRig.headGroup);
+
+  // 5. Bare Facial Skin Patch (Loores & Periorbital Ring)
+  el("path", {
+    d: "M 2 -14 C 14 -22, 34 -18, 48 -6 C 38 4, 18 8, 4 3 C -3 -1, -4 -9, 2 -14 Z",
+    fill: "url(#facialSkinGrad)",
+    stroke: "#c27d6b",
+    "stroke-width": "1.0"
+  }, pelicanRig.headGroup);
+
+  // 6. Upper Mandible (Long Sculpted Pelican Beak with Culmen Ridge, Nostril Groove & Red Hooked Nail)
+  const upperBeakGroup = el("g", {}, pelicanRig.headGroup);
+  // Main Upper Beak Blade
+  el("path", {
+    d: `M 38 -12
+        C 82 -14, 155 -10, 214 -4
+        C 222 -3, 227 2, 226 9
+        C 225 15, 221 19, 217 17
+        C 214 15, 214 11, 208 11
+        C 145 12, 72 9, 14 7
+        C 22 -2, 30 -9, 38 -12 Z`,
+    fill: "url(#upperBeakGrad)",
+    stroke: "#464d57",
+    "stroke-width": "1.3"
+  }, upperBeakGroup);
+
+  // Culmen (Dorsal Beak Ridge Highlight) & Longitudinal Nasal Grooves
+  el("path", {
+    d: "M 42 -9 C 95 -11, 160 -7, 215 -1",
+    fill: "none", stroke: "#ffe7c2", "stroke-width": "1.8", opacity: "0.75", "stroke-linecap": "round"
+  }, upperBeakGroup);
+  el("path", {
+    d: "M 36 -2 C 92 1, 158 4, 210 6",
+    fill: "none", stroke: "#3b424c", "stroke-width": "1.3", opacity: "0.8"
+  }, upperBeakGroup);
+
+  // Bright Crimson-Orange Terminal Hooked Nail (Maxillary Unguis)
+  el("path", {
+    d: "M 210 -4 C 220 -4, 227 1, 226 10 C 225 16, 221 20, 217 17 C 215 15, 215 10, 211 9 Z",
+    fill: "#e04826",
+    stroke: "#7d1e09",
+    "stroke-width": "1.1"
+  }, upperBeakGroup);
+  el("circle", { cx: 221, cy: 3, r: 2.2, fill: "#ffb899", opacity: "0.8" }, upperBeakGroup);
+
+  // 7. Realistic Avian Eye (Deep Ruby-Brown Iris, Pupil, Dual Corneal Specular Highlights & Blinking Eyelid)
+  const eyeGroup = el("g", { transform: "translate(18, -7)" }, pelicanRig.headGroup);
+  // fleshy eye ring
+  el("circle", { cx: 0, cy: 0, r: 8.2, fill: "#d97a64", stroke: "#8f4534", "stroke-width": "1.1" }, eyeGroup);
+  // iris
+  el("circle", { cx: 0, cy: 0, r: 6.2, fill: "#521c14" }, eyeGroup);
+  el("circle", { cx: 0, cy: 0, r: 5.2, fill: "none", stroke: "#8c3322", "stroke-width": "1.2" }, eyeGroup);
+  // pupil
+  el("circle", { cx: 0.4, cy: 0, r: 3.4, fill: "#0a0c0e" }, eyeGroup);
+  // corneal reflections
+  el("circle", { cx: 2.2, cy: -2.2, r: 1.8, fill: "#ffffff" }, eyeGroup);
+  el("circle", { cx: -1.8, cy: 1.8, r: 0.9, fill: "#ffffff", opacity: "0.75" }, eyeGroup);
+  // Blinking Nictitating Membrane / Eyelid
+  pelicanRig.eyelid = el("ellipse", {
+    cx: 0, cy: 0, rx: 7.5, ry: 0,
+    fill: "#e0957e", stroke: "#9e5542", "stroke-width": "1"
+  }, eyeGroup);
+
+  // ---------------- E. NEAR LEG (Crural Feathered Thigh, Scaly Tarsus & Totipalmate Webbed Foot) ----------------
+  const nearLegRoot = document.getElementById("near-leg-layer");
+  pelicanRig.nearLegGroup = el("g", { filter: "url(#featherShadow)" }, nearLegRoot);
+
+  // Scaly Reticulated Tarsometatarsus (Lower Leg from Knee to Ankle)
+  pelicanRig.nearTarsusShaft = el("path", {
+    fill: "none",
+    stroke: "url(#legOrangeGrad)",
+    "stroke-width": "16",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  }, pelicanRig.nearLegGroup);
+
+  // Scale texture cross-hatching overlay on lower leg
+  pelicanRig.nearTarsusScales = el("path", {
+    fill: "none",
+    stroke: "#7d2c0a",
+    "stroke-width": "10",
+    "stroke-dasharray": "2.2 4.2",
+    "stroke-linecap": "butt",
+    opacity: "0.45"
+  }, pelicanRig.nearLegGroup);
+
+  // Specular ridge on the scaly shin
+  pelicanRig.nearTarsusHighlight = el("path", {
+    fill: "none",
+    stroke: "#ffc285",
+    "stroke-width": "3",
+    "stroke-linecap": "round",
+    opacity: "0.65"
+  }, pelicanRig.nearLegGroup);
+
+  // Totipalmate Webbed Foot (All 4 toes connected by webbing, gripping the pedal)
+  pelicanRig.nearFootGroup = el("g", {}, pelicanRig.nearLegGroup);
+  // Webbing membrane between toes
+  el("path", {
+    d: "M -4 -3 C 8 2, 24 2, 34 6 C 30 12, 18 14, 10 13 C 0 11, -14 11, -24 8 C -18 3, -10 -1, -4 -3 Z",
+    fill: "#d45d22",
+    stroke: "#782b08",
+    "stroke-width": "1.2",
+    opacity: "0.94"
+  }, pelicanRig.nearFootGroup);
+  // Distinct Phalanges (Digits II, III, IV forward, Hallux I back) & Curved Claws
+  el("path", {
+    d: "M -2 -3 Q 16 -1 35 6 M -3 -2 Q 14 5 26 11 M -4 -1 Q 4 7 11 13 M -5 -1 Q -15 3 -24 8",
+    fill: "none",
+    stroke: "url(#legOrangeGrad)",
+    "stroke-width": "4.6",
+    "stroke-linecap": "round"
+  }, pelicanRig.nearFootGroup);
+  // Toe joint knuckles & keratin claws
+  el("path", {
+    d: "M 35 6 Q 39 9 37 13 M 26 11 Q 29 14 27 17 M 11 13 Q 13 16 11 18 M -24 8 Q -28 10 -26 14",
+    fill: "none",
+    stroke: "#36251c",
+    "stroke-width": "2.4",
+    "stroke-linecap": "round"
+  }, pelicanRig.nearFootGroup);
+
+  // Feathered Crural Thigh (Upper Leg Drumstick overlapping Knee Joint)
+  pelicanRig.nearThighGroup = el("g", {}, pelicanRig.nearLegGroup);
+  pelicanRig.nearThighPlumage = el("path", {
+    fill: "url(#plumageBodyGrad)",
+    stroke: "#bfb5a7",
+    "stroke-width": "1.5"
+  }, pelicanRig.nearThighGroup);
+
+  // ---------------- F. NEAR WING (Articulated Shoulder -> Elbow -> Carpal Wrist Gripping Handlebar) ----------------
+  const nearWingRoot = document.getElementById("near-wing-layer");
+  pelicanRig.nearWingGroup = el("g", { filter: "url(#deepShadow)" }, nearWingRoot);
+
+  // 1. Dark Slate-Black Primary & Secondary Remiges (Flight Feathers sweeping back from forearm)
+  pelicanRig.nearPrimariesGroup = el("g", {}, pelicanRig.nearWingGroup);
+
+  // 2. Greater & Median Secondary Coverts (Long creamy-white overlapping feathers)
+  pelicanRig.nearCovertsGroup = el("g", {}, pelicanRig.nearWingGroup);
+
+  // 3. Forearm / Carpal Wing Edge & Alula Feathers wrapping around the Near Handlebar Grip
+  pelicanRig.nearCarpalHand = el("g", {}, pelicanRig.nearWingGroup);
+}
+
+// ==================== 6. FOREGROUND FLYING FISH & SEA SPRAY ====================
+const activeFishList = [];
+const sprayList = [];
+
+function initForegroundEffects() {
+  const fg = document.getElementById("foreground-effects");
+  for (let i = 0; i < 24; i++) {
+    const circle = el("circle", {
+      cx: 0, cy: 0, r: 1.2 + (i % 3) * 0.9,
+      fill: "#fff9eb",
+      opacity: 0
+    }, fg);
+    sprayList.push({
+      node: circle,
+      x: Math.random() * 1600,
+      y: 620 + Math.random() * 230,
+      vx: -180 - Math.random() * 160,
+      vy: -15 - Math.random() * 25,
+      life: Math.random()
+    });
+  }
+}
+
+function spawnFlyingFish() {
+  const fg = document.getElementById("foreground-effects");
+  const g = el("g", {}, fg);
+  // Detailed silver coastal mullet/mackerel fish SVG
+  el("path", {
+    d: "M -26 0 C -14 -10, 10 -10, 26 0 C 33 -6, 40 -11, 44 -12 L 38 0 L 44 12 C 40 11, 33 6, 26 0 C 10 10, -14 10, -26 0 Z",
+    fill: "#88a6bc",
+    stroke: "#2b4254",
+    "stroke-width": "1.3"
+  }, g);
+  el("path", {
+    d: "M -24 1 C -12 8, 10 8, 24 1 Z",
+    fill: "#e6eff5"
+  }, g);
+  el("circle", { cx: -16, cy: -2, r: 2.2, fill: "#111" }, g);
+  el("circle", { cx: -16.6, cy: -2.6, r: 0.8, fill: "#fff" }, g);
+
+  activeFishList.push({
+    node: g,
+    t: 0,
+    startX: 1380,
+    startY: 560,
+    ctrlX: 1180,
+    ctrlY: 80
+  });
+}
+
+// ==================== 7. REAL-TIME KINEMATICS & PHYSICS ANIMATION LOOP ====================
+let rearWheelRotNode, frontWheelRotNode;
+const sim = {
+  time: 0,
+  crankAngle: 0,
+  roadOffset: 0,
+  speedMult: 1.05,
+  windMult: 1.1,
+  pouchWeight: 1.0,
+  slowMo: false,
+  zoomMode: false,
+  pouchGulpImpulse: 0,
+  camScale: 1,
+  camX: 0,
+  camY: 0,
+  targetScale: 1,
+  targetX: 0,
+  targetY: 0
+};
+
+function renderArticulatedWing(isNear, shoulder, elbow, wrist, time, wind) {
+  if (!isNear) {
+    // Far wing simple 2-layer perspective silhouette reaching far handlebar grip
+    pelicanRig.farWingUpper.setAttribute(
+      "d",
+      `M ${shoulder.x} ${shoulder.y}
+       Q ${elbow.x - 25} ${elbow.y + 18} ${wrist.x} ${wrist.y}
+       C ${wrist.x + 16} ${wrist.y + 8}, ${wrist.x + 12} ${wrist.y + 22}, ${wrist.x - 8} ${wrist.y + 20}
+       Q ${elbow.x - 10} ${elbow.y + 38} ${shoulder.x - 20} ${shoulder.y + 42} Z`
+    );
+    pelicanRig.farWingPrimaries.setAttribute(
+      "d",
+      `M ${elbow.x - 12} ${elbow.y + 15}
+       L ${elbow.x - 95} ${elbow.y + 52}
+       L ${elbow.x - 72} ${elbow.y + 66}
+       L ${wrist.x - 15} ${wrist.y + 16} Z`
+    );
+    return;
+  }
+
+  // Near Wing: Richly feathered anatomical bird wing folded forward so carpal/alula grips the handlebar!
+  const pGroup = pelicanRig.nearPrimariesGroup;
+  const cGroup = pelicanRig.nearCovertsGroup;
+  const hGroup = pelicanRig.nearCarpalHand;
+  pGroup.innerHTML = "";
+  cGroup.innerHTML = "";
+  hGroup.innerHTML = "";
+
+  // Forearm vector (Elbow -> Wrist on handlebar)
+  const fDx = wrist.x - elbow.x;
+  const fDy = wrist.y - elbow.y;
+  const forearmAngle = (Math.atan2(fDy, fDx) * 180) / Math.PI;
+
+  // 1. Dark Slate-Black Primary & Secondary Flight Feathers (tucked back along flank from forearm)
+  const numPrimaries = 10;
+  for (let i = 0; i < numPrimaries; i++) {
+    const frac = i / (numPrimaries - 1);
+    const fx = elbow.x + fDx * (0.15 + frac * 0.68);
+    const fy = elbow.y + fDy * (0.15 + frac * 0.68);
+    const flutter = Math.sin(time * 8.5 + i * 0.7) * 1.8 * wind;
+    const len = 128 - frac * 34;
+    const ang = 166 - frac * 22 + flutter;
+
+    createDetailedFeather(pGroup, {
+      x: fx, y: fy,
+      len,
+      wid: 18 - frac * 3,
+      angle: ang,
+      fill: "url(#primaryFeatherGrad)",
+      stroke: "#0e1014",
+      shaftColor: "#7e8794",
+      isDark: true
+    });
+  }
+
+  // 2. Greater Coverts (Long Creamy-White Overlapping Feathers over the Primaries)
+  const numGreater = 11;
+  for (let i = 0; i < numGreater; i++) {
+    const frac = i / (numGreater - 1);
+    const fx = elbow.x + fDx * (0.06 + frac * 0.78);
+    const fy = elbow.y + fDy * (0.06 + frac * 0.78) - 4;
+    const flutter = Math.sin(time * 7.2 + i * 0.6) * 1.4 * wind;
+    const len = 86 - frac * 24;
+    const ang = 163 - frac * 24 + flutter;
+
+    createDetailedFeather(cGroup, {
+      x: fx, y: fy,
+      len,
+      wid: 20 - frac * 3,
+      angle: ang,
+      fill: "url(#featherSingleGrad)",
+      stroke: "#bfb5a6"
+    });
+  }
+
+  // 3. Upper Arm (Humerus) & Scapular / Median Covert Shingles (Shoulder -> Elbow -> Forearm)
+  el("path", {
+    d: `M ${shoulder.x - 18} ${shoulder.y - 16}
+        C ${shoulder.x + 28} ${shoulder.y - 20}, ${elbow.x + 55} ${elbow.y - 22}, ${wrist.x + 4} ${wrist.y - 6}
+        C ${wrist.x - 18} ${wrist.y + 12}, ${elbow.x + 10} ${elbow.y + 18}, ${elbow.x - 24} ${elbow.y + 14}
+        C ${shoulder.x - 42} ${shoulder.y + 24}, ${shoulder.x - 36} ${shoulder.y - 4}, ${shoulder.x - 18} ${shoulder.y - 16} Z`,
+    fill: "url(#plumageBodyGrad)",
+    stroke: "#c4bab0",
+    "stroke-width": "1.4"
+  }, cGroup);
+
+  const numMedian = 9;
+  for (let i = 0; i < numMedian; i++) {
+    const frac = i / (numMedian - 1);
+    const fx = shoulder.x - 10 + (wrist.x - shoulder.x) * (0.08 + frac * 0.74);
+    const fy = shoulder.y + (wrist.y - shoulder.y) * (0.08 + frac * 0.74) + Math.sin(frac * Math.PI) * 14;
+    const len = 56 - frac * 16;
+    const ang = 158 - frac * 25 + Math.sin(time * 6 + i) * 1.1 * wind;
+
+    createDetailedFeather(cGroup, {
+      x: fx, y: fy,
+      len,
+      wid: 19 - frac * 3,
+      angle: ang,
+      fill: "url(#featherSingleGrad)",
+      stroke: "#c4b9aa"
+    });
+  }
+
+  // 4. Alula & Carpal Feathered "Hand" Wrapping Securely Around the Leather Handlebar Grip
+  for (let k = 0; k < 4; k++) {
+    createDetailedFeather(hGroup, {
+      x: wrist.x - 12 + k * 5,
+      y: wrist.y - 5 + k * 2,
+      len: 36 - k * 3,
+      wid: 13,
+      angle: 22 + k * 14,
+      fill: "url(#featherSingleGrad)",
+      stroke: "#b5aba0"
+    });
+  }
+}
+
+function updateScene(dt) {
+  const effDt = dt * (sim.slowMo ? 0.25 : 1.0);
+  sim.time += effDt;
+
+  // Angular velocity of crank (rad/s)
+  const omega = 3.4 * sim.speedMult;
+  sim.crankAngle = (sim.crankAngle + omega * effDt) % (Math.PI * 2);
+
+  // Linear ground speed matching wheel circumference (v = omega_wheel * R)
+  const gearRatio = BIKE.chainringR / BIKE.cogR; // ~2.31
+  const wheelAngleDelta = omega * effDt * gearRatio * 0.55;
+  const linearSpeed = (wheelAngleDelta / effDt) * BIKE.rearWheel.tireR;
+  sim.roadOffset += linearSpeed * effDt;
+
+  // Decay pouch fish-gulp impulse
+  sim.pouchGulpImpulse *= Math.exp(-3.2 * effDt);
+
+  // ---------------- 1. ROTATE WHEELS, CHAINRING & ROLLER CHAIN ----------------
+  const wheelDeg = ((sim.roadOffset / BIKE.rearWheel.tireR) * 180) / Math.PI;
+  rearWheelRotNode.setAttribute("transform", `rotate(${wheelDeg % 360})`);
+  frontWheelRotNode.setAttribute("transform", `rotate(${wheelDeg % 360})`);
+
+  const crankDeg = (sim.crankAngle * 180) / Math.PI;
+  chainringRotGroup.setAttribute("transform", `translate(${BIKE.bb.x}, ${BIKE.bb.y}) rotate(${crankDeg})`);
+  chainPathUpper.setAttribute("stroke-dashoffset", (-sim.roadOffset * 0.45) % 22);
+
+  // Subtle derailleur cage tension oscillation
+  const derOsc = Math.sin(sim.crankAngle * 2) * 3.5;
+  rearDerailleurGroup.setAttribute("transform", `translate(${BIKE.rearWheel.x}, ${BIKE.rearWheel.y}) rotate(${derOsc})`);
+
+  // ---------------- 2. CRANK ARMS & HORIZONTAL PEDALS ----------------
+  const nearPedal = {
+    x: BIKE.bb.x + Math.cos(sim.crankAngle) * BIKE.crankRadius,
+    y: BIKE.bb.y + Math.sin(sim.crankAngle) * BIKE.crankRadius
+  };
+  const farPedal = {
+    x: BIKE.bb.x + Math.cos(sim.crankAngle + Math.PI) * BIKE.crankRadius,
+    y: BIKE.bb.y + Math.sin(sim.crankAngle + Math.PI) * BIKE.crankRadius
+  };
+
+  document.getElementById("near-crank-line").setAttribute("x2", nearPedal.x);
+  document.getElementById("near-crank-line").setAttribute("y2", nearPedal.y);
+  document.getElementById("near-crank-flute").setAttribute("x2", nearPedal.x);
+  document.getElementById("near-crank-flute").setAttribute("y2", nearPedal.y);
+
+  document.getElementById("far-crank-line").setAttribute("x2", farPedal.x);
+  document.getElementById("far-crank-line").setAttribute("y2", farPedal.y);
+
+  // Pedals tilt slightly with foot ankle angle through the stroke
+  const nearPedalTilt = Math.sin(sim.crankAngle - 0.4) * 11;
+  const farPedalTilt = Math.sin(sim.crankAngle + Math.PI - 0.4) * 11;
+  nearPedalGroup.setAttribute("transform", `translate(${nearPedal.x}, ${nearPedal.y}) rotate(${nearPedalTilt})`);
+  farPedalGroup.setAttribute("transform", `translate(${farPedal.x}, ${farPedal.y}) rotate(${farPedalTilt})`);
+
+  // ---------------- 3. PELICAN TORSO & SADDLE WEIGHT TRANSFER ----------------
+  // Pelican body bobs twice per pedal revolution (once per downstroke)
+  const downstrokeBounce = Math.sin(sim.crankAngle * 2 - 0.4) * 6.5;
+  const torsoPitch = Math.cos(sim.crankAngle * 2) * 1.6;
+
+  // Sprung leather saddle compresses slightly under pelican's weight
+  const saddleGroup = document.getElementById("saddle-group");
+  saddleGroup.setAttribute(
+    "transform",
+    `translate(${BIKE.saddlePos.x}, ${BIKE.saddlePos.y + Math.max(0, downstrokeBounce * 0.45)}) rotate(${torsoPitch * 0.4})`
+  );
+
+  pelicanRig.torsoGroup.setAttribute(
+    "transform",
+    `translate(0, ${downstrokeBounce}) rotate(${torsoPitch} 685 415)`
+  );
+
+  // Tail feathers counter-bob
+  const tailWag = Math.sin(sim.crankAngle * 2 + 0.9) * 4.5 + Math.sin(sim.time * 9) * 1.2 * sim.windMult;
+  pelicanRig.tailGroup.setAttribute("transform", `translate(592, 438) rotate(${tailWag})`);
+
+  // Golden breast feathers flutter in headwind
+  pelicanRig.breastTufts.forEach((bt) => {
+    const wAng = bt.baseAngle + Math.sin(sim.time * 8 + bt.phase) * 5.5 * sim.windMult;
+    bt.node.setAttribute("transform", `translate(${bt.bx}, ${bt.by}) rotate(${wAng})`);
+  });
+
+  // ---------------- 4. TWO-BONE INVERSE KINEMATICS FOR NEAR & FAR LEGS ----------------
+  const hipNear = { x: 678, y: 446 + downstrokeBounce };
+  const hipFar  = { x: 690, y: 440 + downstrokeBounce };
+  const L1 = 165; // Upper Feathered Crural / Tibiotarsus
+  const L2 = 178; // Scaly Orange Tarsometatarsus
+
+  // Solve Near Leg IK (Knee points forward toward handlebar: bendDir = +1)
+  const nearAnkleTarget = { x: nearPedal.x - 6, y: nearPedal.y - 6 };
+  const nearKnee = solveTwoBoneIK(hipNear, nearAnkleTarget, L1, L2, 1);
+
+  // Render Near Leg Feathered Thigh (Hip -> Knee)
+  const thighAngle = Math.atan2(nearKnee.y - hipNear.y, nearKnee.x - hipNear.x);
+  const perpX = -Math.sin(thighAngle);
+  const perpY = Math.cos(thighAngle);
+  pelicanRig.nearThighPlumage.setAttribute(
+    "d",
+    `M ${hipNear.x - perpX * 34} ${hipNear.y - perpY * 34}
+     C ${hipNear.x + (nearKnee.x - hipNear.x) * 0.55 - perpX * 30} ${hipNear.y + (nearKnee.y - hipNear.y) * 0.55 - perpY * 30},
+       ${nearKnee.x - perpX * 16} ${nearKnee.y - perpY * 16},
+       ${nearKnee.x + Math.cos(thighAngle) * 10} ${nearKnee.y + Math.sin(thighAngle) * 10}
+     C ${nearKnee.x + perpX * 18} ${nearKnee.y + perpY * 18},
+       ${hipNear.x + (nearKnee.x - hipNear.x) * 0.45 + perpX * 32} ${hipNear.y + (nearKnee.y - hipNear.y) * 0.45 + perpY * 32},
+       ${hipNear.x + perpX * 30} ${hipNear.y + perpY * 30} Z`
+  );
+
+  // Render Near Scaly Orange Lower Leg (Knee -> Pedal Ankle)
+  const tarsusD = `M ${nearKnee.x} ${nearKnee.y} L ${nearAnkleTarget.x} ${nearAnkleTarget.y}`;
+  pelicanRig.nearTarsusShaft.setAttribute("d", tarsusD);
+  pelicanRig.nearTarsusScales.setAttribute("d", tarsusD);
+  pelicanRig.nearTarsusHighlight.setAttribute(
+    "d",
+    `M ${nearKnee.x + 2} ${nearKnee.y} L ${nearAnkleTarget.x + 2} ${nearAnkleTarget.y}`
+  );
+
+  // Position Near Totipalmate Webbed Foot onto the Pedal
+  pelicanRig.nearFootGroup.setAttribute(
+    "transform",
+    `translate(${nearPedal.x - 4}, ${nearPedal.y - 5}) rotate(${nearPedalTilt})`
+  );
+
+  // Solve Far Leg IK
+  const farAnkleTarget = { x: farPedal.x - 6, y: farPedal.y - 6 };
+  const farKnee = solveTwoBoneIK(hipFar, farAnkleTarget, L1, L2, 1);
+
+  pelicanRig.farThighFeather.setAttribute(
+    "d",
+    `M ${hipFar.x - 20} ${hipFar.y + 8}
+     Q ${(hipFar.x + farKnee.x) * 0.5 + 16} ${(hipFar.y + farKnee.y) * 0.5 - 12} ${farKnee.x + 6} ${farKnee.y + 4}
+     Q ${(hipFar.x + farKnee.x) * 0.5 - 18} ${(hipFar.y + farKnee.y) * 0.5 + 20} ${hipFar.x - 24} ${hipFar.y + 24} Z`
+  );
+  pelicanRig.farTarsus.setAttribute("d", `M ${farKnee.x} ${farKnee.y} L ${farAnkleTarget.x} ${farAnkleTarget.y}`);
+  pelicanRig.farFoot.setAttribute(
+    "d",
+    `M ${farPedal.x - 22} ${farPedal.y - 2} Q ${farPedal.x + 5} ${farPedal.y - 8} ${farPedal.x + 26} ${farPedal.y - 1} L ${farPedal.x - 18} ${farPedal.y + 3} Z`
+  );
+
+  // ---------------- 5. ARTICULATED WINGS GRIPPING HANDLEBARS ----------------
+  const nearShoulder = { x: 716, y: 334 + downstrokeBounce };
+  const nearWrist = { x: BIKE.gripNear.x + 4, y: BIKE.gripNear.y - 2 };
+  const nearElbow = solveTwoBoneIK(nearShoulder, nearWrist, 108, 124, 1);
+  renderArticulatedWing(true, nearShoulder, nearElbow, nearWrist, sim.time, sim.windMult);
+
+  const farShoulder = { x: 732, y: 322 + downstrokeBounce };
+  const farWrist = { x: BIKE.gripFar.x + 4, y: BIKE.gripFar.y - 2 };
+  const farElbow = solveTwoBoneIK(farShoulder, farWrist, 104, 120, 1);
+  renderArticulatedWing(false, farShoulder, farElbow, farWrist, sim.time, sim.windMult);
+
+  // ---------------- 6. S-CURVED SERPENTINE NECK, HEAD STABILIZATION & GULAR POUCH PHYSICS ----------------
+  const neckBase = { x: 758, y: 314 + downstrokeBounce };
+  // Avian head stabilization: head lags & dampens torso bounce while gently thrusting with cadence
+  const headX = 812 + Math.cos(sim.crankAngle * 2 - 0.7) * 7.5;
+  const headY = 178 + Math.sin(sim.crankAngle * 2 - 1.1) * 4.2 - sim.pouchGulpImpulse * 14;
+  const headPitch = Math.sin(sim.crankAngle * 2 - 0.5) * 2.4 - sim.pouchGulpImpulse * 16;
+
+  // Dynamic S-curve control points for realistic pelican neck posture
+  const sway = Math.sin(sim.time * 4.2) * 3.5;
+  const c1x = neckBase.x - 42 + sway;
+  const c1y = neckBase.y - 48;
+  const c2x = headX - 58 - sway;
+  const c2y = headY + 62;
+
+  // Outer (back) & Inner (front) envelope of the S-curved neck
+  pelicanRig.neckPath.setAttribute(
+    "d",
+    `M ${neckBase.x - 32} ${neckBase.y + 8}
+     C ${c1x - 28} ${c1y + 6}, ${c2x - 26} ${c2y - 4}, ${headX - 28} ${headY + 6}
+     L ${headX + 12} ${headY + 12}
+     C ${c2x + 18} ${c2y + 4}, ${c1x + 22} ${c1y - 4}, ${neckBase.x + 24} ${neckBase.y - 6} Z`
+  );
+
+  // Feather striation lines along the neck
+  pelicanRig.neckFeatherLines.setAttribute(
+    "d",
+    `M ${neckBase.x - 10} ${neckBase.y - 2} C ${c1x - 6} ${c1y}, ${c2x - 5} ${c2y}, ${headX - 10} ${headY + 10}
+     M ${neckBase.x + 6} ${neckBase.y - 4} C ${c1x + 8} ${c1y - 2}, ${c2x + 6} ${c2y + 2}, ${headX + 2} ${headY + 11}`
+  );
+
+  pelicanRig.headGroup.setAttribute("transform", `translate(${headX}, ${headY}) rotate(${headPitch})`);
+
+  // Occipital Crest Feathers Fluttering
+  pelicanRig.crestFeathers.forEach((cf) => {
+    const flutter = Math.sin(sim.time * 11 + cf.phase) * 7.5 * sim.windMult;
+    cf.node.setAttribute("transform", `translate(${cf.x}, ${cf.y}) rotate(${cf.ang + flutter})`);
+  });
+
+  // Deformable Gular Pouch (Throat Sac) Fluid Jiggle & Sloshing Wave Simulation
+  const baseSag = 44 + 34 * sim.pouchWeight + sim.pouchGulpImpulse * 36;
+  const jiggleY = Math.sin(sim.crankAngle * 2 - 1.3) * (8.5 * sim.pouchWeight)
+                + Math.sin(sim.time * 11.5) * (2.6 * sim.windMult)
+                + Math.sin(sim.time * 16) * (sim.pouchGulpImpulse * 14);
+  const sloshX = Math.cos(sim.crankAngle * 2 - 0.8) * (7.5 * sim.pouchWeight) - sim.windMult * 4;
+
+  const pDepth = baseSag + jiggleY;
+  const pBellyX = 104 + sloshX;
+
+  // Smooth elastic pouch contour hanging from lower mandible rami (8,13) -> (216,15)
+  pelicanRig.pouchPath.setAttribute(
+    "d",
+    `M 8 13
+     C 24 ${18 + pDepth * 0.72}, ${pBellyX - 42} ${16 + pDepth}, ${pBellyX} ${15 + pDepth}
+     C ${pBellyX + 52} ${14 + pDepth * 0.94}, 182 ${16 + pDepth * 0.35}, 216 15
+     Q 115 19 8 13 Z`
+  );
+
+  // Move translucent fish silhouette inside the throat pouch
+  const fishVisible = sim.pouchWeight > 0.45 ? Math.min(0.46, (sim.pouchWeight - 0.3) * 0.38) : 0;
+  pelicanRig.pouchFishSilhouette.setAttribute("opacity", fishVisible);
+  pelicanRig.pouchFishSilhouette.setAttribute(
+    "transform",
+    `translate(${sloshX * 0.7}, ${(pDepth - 68) * 0.55}) rotate(${sloshX * 0.6} 105 48)`
+  );
+
+  // Subsurface vascular branching veins & skin striae on the pouch
+  pelicanRig.pouchVeinsPath.setAttribute(
+    "d",
+    `M 36 16 Q ${48 + sloshX * 0.4} ${14 + pDepth * 0.45} ${66 + sloshX * 0.6} ${12 + pDepth * 0.76}
+     M 54 36 Q ${72 + sloshX * 0.5} ${18 + pDepth * 0.58} ${84 + sloshX * 0.7} ${12 + pDepth * 0.84}
+     M 92 17 Q ${104 + sloshX * 0.7} ${16 + pDepth * 0.55} ${pBellyX + 6} ${12 + pDepth * 0.88}
+     M 102 42 Q ${120 + sloshX * 0.6} ${18 + pDepth * 0.62} ${134 + sloshX * 0.5} ${14 + pDepth * 0.72}
+     M 148 16 Q ${152 + sloshX * 0.3} ${15 + pDepth * 0.35} ${144 + sloshX * 0.4} ${14 + pDepth * 0.55}`
+  );
+
+  pelicanRig.pouchHighlightPath.setAttribute(
+    "d",
+    `M 42 ${16 + pDepth * 0.55} Q ${pBellyX} ${10 + pDepth * 0.95} ${pBellyX + 58} ${14 + pDepth * 0.48}`
+  );
+
+  // Natural Avian Eye Blink Cycle (every ~4.5 seconds)
+  const blinkPhase = sim.time % 4.6;
+  let blinkRy = 0;
+  if (blinkPhase > 4.42) {
+    const b = (blinkPhase - 4.42) / 0.18;
+    blinkRy = Math.sin(b * Math.PI) * 7.5;
+  }
+  pelicanRig.eyelid.setAttribute("ry", blinkRy.toFixed(2));
+
+  // ---------------- 7. UPDATE PARALLAX ENVIRONMENT & FLYING FISH ----------------
+  // Ocean shimmer
+  envState.shimmerBars.forEach((sb) => {
+    const w = sb.baseW * (0.75 + 0.35 * Math.sin(sim.time * sb.speed + sb.phase));
+    const x = sb.baseX + Math.cos(sim.time * 1.4 + sb.phase) * 14;
+    sb.node.setAttribute("x", x - w / 2);
+    sb.node.setAttribute("width", w);
+  });
+
+  // Seawall stone blocks scroll
+  envState.seawallBlocks.forEach((b) => {
+    let nx = ((b.x - sim.roadOffset * 0.85) % 2640);
+    if (nx < -420) nx += 2640;
+    b.node.setAttribute("transform", `translate(${nx}, 732)`);
+  });
+
+  // Road dashes scroll
+  envState.roadStripes.forEach((s) => {
+    let nx = ((s.x - sim.roadOffset) % 2660);
+    if (nx < -420) nx += 2660;
+    s.node.setAttribute("transform", `translate(${nx}, 895)`);
+  });
+
+  // Asphalt pebbles scroll
+  envState.pebbles.forEach((p) => {
+    let nx = ((p.x - sim.roadOffset * p.speedMult) % 2400);
+    if (nx < -350) nx += 2400;
+    p.node.setAttribute("transform", `translate(${nx}, ${p.y})`);
+  });
+
+  // Coastal marram grass tufts scroll & bend in sea wind
+  envState.grassTufts.forEach((gt) => {
+    let nx = ((gt.x - sim.roadOffset * 0.92) % 2640);
+    if (nx < -400) nx += 2640;
+    gt.node.setAttribute("transform", `translate(${nx}, 755)`);
+    const bend = -8 * sim.windMult + Math.sin(sim.time * 5.5 + gt.phase) * 5 * sim.windMult;
+    gt.blades.forEach((bl) => {
+      bl.node.setAttribute(
+        "d",
+        `M 0 0 Q ${bl.dx * 0.4 + bend * 0.35} ${bl.dy * 0.6} ${bl.dx + bend} ${bl.dy}`
+      );
+    });
+  });
+
+  // Sea spray particles
+  sprayList.forEach((sp) => {
+    sp.life += effDt * 0.55;
+    if (sp.life > 1) {
+      sp.life = 0;
+      sp.x = 1100 + Math.random() * 650;
+      sp.y = 650 + Math.random() * 220;
+    }
+    sp.x += (sp.vx * sim.windMult - linearSpeed * 0.4) * effDt;
+    sp.y += sp.vy * effDt;
+    const op = Math.sin(sp.life * Math.PI) * 0.45 * Math.min(1.5, sim.windMult);
+    sp.node.setAttribute("cx", sp.x);
+    sp.node.setAttribute("cy", sp.y);
+    sp.node.setAttribute("opacity", op.toFixed(2));
+  });
+
+  // Flying fish trajectory into pelican's gular pouch!
+  const targetPouchWorld = { x: headX + 125, y: headY + 32 };
+  for (let i = activeFishList.length - 1; i >= 0; i--) {
+    const f = activeFishList[i];
+    f.t += effDt * 1.45;
+    if (f.t >= 1) {
+      // Fish lands inside the pelican's pouch!
+      f.node.remove();
+      activeFishList.splice(i, 1);
+      sim.pouchGulpImpulse = 1.15;
+      sim.pouchWeight = Math.min(2.0, sim.pouchWeight + 0.25);
+      const slider = document.getElementById("ctrl-pouch");
+      slider.value = sim.pouchWeight;
+      document.getElementById("val-pouch").textContent = `${Math.round(sim.pouchWeight * 100)}%`;
+      continue;
+    }
+    const u = 1 - f.t;
+    const fx = u * u * f.startX + 2 * u * f.t * f.ctrlX + f.t * f.t * targetPouchWorld.x;
+    const fy = u * u * f.startY + 2 * u * f.t * f.ctrlY + f.t * f.t * targetPouchWorld.y;
+    const vx = 2 * u * (f.ctrlX - f.startX) + 2 * f.t * (targetPouchWorld.x - f.ctrlX);
+    const vy = 2 * u * (f.ctrlY - f.startY) + 2 * f.t * (targetPouchWorld.y - f.ctrlY);
+    const ang = (Math.atan2(vy, vx) * 180) / Math.PI + 180;
+    f.node.setAttribute("transform", `translate(${fx}, ${fy}) rotate(${ang})`);
+  }
+
+  // Smooth Camera Zoom & Pan interpolation
+  sim.camScale += (sim.targetScale - sim.camScale) * Math.min(1, dt * 6);
+  sim.camX += (sim.targetX - sim.camX) * Math.min(1, dt * 6);
+  sim.camY += (sim.targetY - sim.camY) * Math.min(1, dt * 6);
+  document.getElementById("camera-rig").setAttribute(
+    "transform",
+    `translate(${sim.camX}, ${sim.camY}) scale(${sim.camScale})`
+  );
+}
+
+// ==================== 8. INITIALIZATION & UI INTERACTION ====================
+function init() {
+  buildEnvironment();
+  rearWheelRotNode = buildSpokedWheel("rear-wheel-group");
+  frontWheelRotNode = buildSpokedWheel("front-wheel-group");
+  buildBicycleFrame();
+  buildDrivetrain();
+  buildPelicanAnatomy();
+  initForegroundEffects();
+
+  // Bind UI Controls
+  const ctrlSpeed = document.getElementById("ctrl-speed");
+  const valSpeed = document.getElementById("val-speed");
+  ctrlSpeed.addEventListener("input", (e) => {
+    sim.speedMult = parseFloat(e.target.value);
+    valSpeed.textContent = sim.speedMult.toFixed(2) + "x";
+  });
+
+  const ctrlWind = document.getElementById("ctrl-wind");
+  const valWind = document.getElementById("val-wind");
+  ctrlWind.addEventListener("input", (e) => {
+    sim.windMult = parseFloat(e.target.value);
+    valWind.textContent = sim.windMult.toFixed(2) + "x";
+  });
+
+  const ctrlPouch = document.getElementById("ctrl-pouch");
+  const valPouch = document.getElementById("val-pouch");
+  ctrlPouch.addEventListener("input", (e) => {
+    sim.pouchWeight = parseFloat(e.target.value);
+    valPouch.textContent = Math.round(sim.pouchWeight * 100) + "%";
+  });
+
+  document.getElementById("btn-fish").addEventListener("click", () => {
+    spawnFlyingFish();
+  });
+
+  const btnZoom = document.getElementById("btn-zoom");
+  btnZoom.addEventListener("click", () => {
+    sim.zoomMode = !sim.zoomMode;
+    btnZoom.classList.toggle("active", sim.zoomMode);
+    if (sim.zoomMode) {
+      sim.targetScale = 1.65;
+      sim.targetX = -510;
+      sim.targetY = -175;
+    } else {
+      sim.targetScale = 1;
+      sim.targetX = 0;
+      sim.targetY = 0;
+    }
+  });
+
+  const btnSlowMo = document.getElementById("btn-slowmo");
+  btnSlowMo.addEventListener("click", () => {
+    sim.slowMo = !sim.slowMo;
+    btnSlowMo.classList.toggle("active", sim.slowMo);
+  });
+
+  // Mouse wheel zoom & drag pan on stage
+  const stage = document.getElementById("stage-container");
+  let isDragging = false;
+  let lastMouse = { x: 0, y: 0 };
+
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+    const newScale = Math.max(0.75, Math.min(3.2, sim.targetScale * factor));
+    // Zoom toward center
+    sim.targetX = 800 - (800 - sim.targetX) * (newScale / sim.targetScale);
+    sim.targetY = 480 - (480 - sim.targetY) * (newScale / sim.targetScale);
+    sim.targetScale = newScale;
+  }, { passive: false });
+
+  stage.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastMouse.x;
+    const dy = e.clientY - lastMouse.y;
+    lastMouse = { x: e.clientX, y: e.clientY };
+    sim.targetX += dx;
+    sim.targetY += dy;
+  });
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
+
+  // Start 60fps animation loop
+  let lastTime = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    updateScene(dt);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>

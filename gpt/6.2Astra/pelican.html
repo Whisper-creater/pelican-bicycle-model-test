@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>海岸骑行 · 褐鹈鹕</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#f3eee3;color:#393d36}body{display:grid;grid-template-rows:minmax(0,1fr) auto;font-family:Georgia,"Songti SC","SimSun",serif}main{min-height:0;overflow:hidden;background:#cccbc0}#scene{width:100%;height:100%;display:block}
+footer{padding:14px clamp(16px,3.1vw,50px);min-height:67px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #99968566;background:#f4f0e6}.caption{display:flex;gap:14px;align-items:baseline}.caption b{font-size:18px;letter-spacing:.14em;font-weight:500}.caption i{color:#65685c;font-size:14px}.controls{display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif}button{height:36px;min-width:42px;border:1px solid #a7a798;border-radius:20px;background:transparent;color:#353e35;cursor:pointer;display:grid;place-items:center;font:13px system-ui,sans-serif}button:hover{background:#e4e3d5}button:focus-visible{outline:2px solid #416c69;outline-offset:3px}button svg{width:14px;height:14px}@media(max-width:480px){footer{padding:11px 15px}.caption{display:grid;gap:3px}.caption b{font-size:16px}.caption i{font-size:12px}}
+</style>
+<main><svg id="scene" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="artTitle artDesc">
+<title id="artTitle">海岸骑行</title><desc id="artDesc">一只金顶白颈的褐鹈鹕骑着墨绿色旅行自行车穿过海边沙路。橘红的长喉囊迎着风，两只蹼足交替踏动。</desc>
+<defs id="defs">
+ <linearGradient id="sky" x1="0" y1="-95" x2="25" y2="518" gradientUnits="userSpaceOnUse"><stop stop-color="#98b3b9"/><stop offset=".42" stop-color="#c5cec2"/><stop offset=".79" stop-color="#efdbc0"/><stop offset="1" stop-color="#edcaa7"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#ffedbc" stop-opacity=".92"/><stop offset=".36" stop-color="#f9dbab" stop-opacity=".57"/><stop offset="1" stop-color="#f5d2aa" stop-opacity="0"/></radialGradient>
+ <linearGradient id="sea" x2=".13" y2="1"><stop stop-color="#a1aca4"/><stop offset=".34" stop-color="#b7c2b4"/><stop offset="1" stop-color="#77978d"/></linearGradient>
+ <linearGradient id="road" gradientUnits="userSpaceOnUse" x1="0" y1="655" x2="3" y2="1040"><stop stop-color="#b9ac8f"/><stop offset=".22" stop-color="#d8c8a7"/><stop offset=".5" stop-color="#d1bf9c"/><stop offset="1" stop-color="#a99a7c"/></linearGradient>
+ <linearGradient id="dune" x2=".12" y2="1"><stop stop-color="#a9a885"/><stop offset=".45" stop-color="#909576"/><stop offset="1" stop-color="#868668"/></linearGradient>
+ <linearGradient id="body" x1=".18" y1="0" x2=".78" y2=".95"><stop stop-color="#efe1b8"/><stop offset=".24" stop-color="#d4c9ab"/><stop offset=".55" stop-color="#a5977f"/><stop offset=".85" stop-color="#746b60"/><stop offset="1" stop-color="#494943"/></linearGradient>
+ <linearGradient id="neck" x1="0" y1=".1" x2="1" y2=".48"><stop stop-color="#4e3c32"/><stop offset=".19" stop-color="#79523b"/><stop offset=".4" stop-color="#a67851"/><stop offset=".54" stop-color="#d8c9a5"/><stop offset=".72" stop-color="#f3e7c5"/><stop offset="1" stop-color="#aa9f88"/></linearGradient>
+ <radialGradient id="head" cx=".31" cy=".24" r=".84"><stop stop-color="#faeabb"/><stop offset=".32" stop-color="#f0d799"/><stop offset=".6" stop-color="#d8bd82"/><stop offset=".83" stop-color="#cab998"/><stop offset="1" stop-color="#8c8473"/></radialGradient>
+ <linearGradient id="pouch" x1=".33" y1=".08" x2=".64" y2=".95"><stop stop-color="#985b40"/><stop offset=".22" stop-color="#cc7f51"/><stop offset=".49" stop-color="#e1a370"/><stop offset=".74" stop-color="#d99964"/><stop offset="1" stop-color="#ab6846"/></linearGradient>
+ <linearGradient id="bill" x1=".45" y1=".25" x2=".53" y2=".76"><stop stop-color="#f8e5b9"/><stop offset=".28" stop-color="#e5cc9f"/><stop offset=".66" stop-color="#b6a48b"/><stop offset="1" stop-color="#8d7964"/></linearGradient>
+ <linearGradient id="leather" x2="0" y2="1"><stop stop-color="#c28e5a"/><stop offset=".3" stop-color="#99663e"/><stop offset=".7" stop-color="#70472e"/><stop offset="1" stop-color="#402f27"/></linearGradient>
+ <linearGradient id="steel" x2=".8" y2=".6"><stop stop-color="#4d5450"/><stop offset=".24" stop-color="#cbcec0"/><stop offset=".4" stop-color="#eef0db"/><stop offset=".6" stop-color="#818c83"/><stop offset=".85" stop-color="#4d5853"/><stop offset="1" stop-color="#bdc0ac"/></linearGradient>
+ <linearGradient id="foot" x2=".2" y2="1"><stop stop-color="#a98b63"/><stop offset=".28" stop-color="#b8a07a"/><stop offset=".58" stop-color="#8c7c62"/><stop offset="1" stop-color="#60594d"/></linearGradient>
+ <radialGradient id="shadow"><stop stop-color="#504b3c" stop-opacity=".46"/><stop offset=".55" stop-color="#5d5847" stop-opacity=".21"/><stop offset="1" stop-color="#5d5847" stop-opacity="0"/></radialGradient>
+ <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+ <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".64" numOctaves="3" stitchTiles="stitch"/></filter>
+ <pattern id="paper" width="160" height="160" patternUnits="userSpaceOnUse"><rect width="160" height="160" filter="url(#grain)" opacity=".6"/></pattern>
+ <path id="bodyShape" d="M768 306 C750 279 714 274 675 285 C628 297 590 320 557 347 Q507 385 444 391 Q465 406 514 405 C558 435 597 450 642 465 C678 477 718 467 747 448 C781 425 797 380 785 344Z"/>
+ <path id="neckShape" d="M700 304 C725 278 725 249 713 224 C699 202 696 188 710 169 Q719 144 751 145 Q790 145 800 181 L786 218 C765 222 755 232 761 248 C769 271 802 289 805 319 C810 350 797 378 774 391 Q764 347 732 328Z"/>
+ <path id="headShape" d="M702 191 C697 175 706 151 721 141 Q744 119 773 129 C791 133 803 148 809 163 L810 186 Q794 202 782 211 C762 222 740 221 721 216 Q708 211 702 191Z"/>
+ <path id="sacShape" d="M784 182 Q815 184 851 202 L1006 258 Q985 284 953 299 C917 316 884 313 849 296 C814 280 785 255 773 228 Q765 204 784 182Z"/>
+ <clipPath id="bodyClip"><use href="#bodyShape"/></clipPath><clipPath id="neckClip"><use href="#neckShape"/></clipPath><clipPath id="headClip"><use href="#headShape"/></clipPath><clipPath id="sacClip"><use href="#sacShape"/></clipPath>
+</defs>
+<g id="landscape">
+<rect x="-1400" y="-1100" width="4240" height="1660" fill="url(#sky)"/>
+<ellipse cx="250" cy="367" rx="570" ry="400" fill="url(#glow)"/><circle cx="256" cy="361" r="39" fill="#fff4cf" opacity=".9"/>
+<g id="clouds"/><g id="hills"/><g id="gulls"/>
+<rect x="-1400" y="505" width="4240" height="126" fill="url(#sea)"/><g id="water"/>
+<g id="glitter"/><g id="headland"><path d="M1050 511q71-8 121-30t118-19q62-14 107-8l120-9 1500-40v109H1050z" fill="#88978c"/><path d="M1128 512q89-17 132-30t113-9l82-8 1550-48v97H1128z" fill="#75877c"/>
+<g transform="translate(1280 464)" stroke-linejoin="round"><path d="M-5 1l2.2-33h4.7L6 1z" fill="#e5dac2" stroke="#8f9585" stroke-width=".8"/><path d="M-3.5-14h7l.6 7h-8z" fill="#a67e65"/><path d="M-3.2-34v-6h5.8v6z" fill="#808779"/><path d="M-4-40l3.6-4 4.2 4zM-4.5-33h8" fill="#6c756c" stroke="#6c756c"/><path d="M10-1v-7h18v7z" fill="#c8c3aa"/><path d="M8-8l6-5h12l4 5z" fill="#978570"/></g></g>
+<g id="dunes"/><rect x="-1400" y="656" width="4240" height="1444" fill="url(#road)"/><g id="sand"/><g id="verge"/>
+</g>
+<g id="castShadow"><ellipse cx="774" cy="778" rx="342" ry="18" fill="url(#shadow)"/><ellipse cx="548" cy="771" rx="57" ry="6" fill="url(#shadow)"/><ellipse cx="922" cy="771" rx="62" ry="6" fill="url(#shadow)"/></g>
+<g id="cycle">
+ <g id="backWheel" transform="translate(540 647)"/><g id="frontWheel" transform="translate(915 647)"/>
+ <g id="farLeg"/>
+ <g id="frame"/>
+ <g id="drive"/>
+ <g id="nearLeg"/>
+ <g id="rider">
+  <g id="farWing"/>
+  <g id="tail"/>
+  <use href="#bodyShape" fill="url(#body)"/><g id="breast" clip-path="url(#bodyClip)"/>
+  <use href="#neckShape" fill="url(#neck)"/><g id="neckFibres" clip-path="url(#neckClip)"/>
+  <g id="wing"/>
+  <g id="skull">
+   <use href="#headShape" fill="url(#head)"/><g id="headFibres" clip-path="url(#headClip)"/>
+   <use href="#sacShape" fill="url(#pouch)" stroke="#976f53" stroke-width="1.2"/><g id="folds" clip-path="url(#sacClip)"/>
+   <path d="M773 219 Q775 241 809 267 Q863 313 916 308" fill="none" stroke="#f4c28a" stroke-width="1.8"/>
+   <path id="upperBill" d="M787 164 C810 158 829 171 849 181 C904 202 964 231 1009 249 Q1018 253 1012 263 Q1009 268 1005 268 L1007 258 C957 249 898 227 841 209 Q807 197 782 189Z" fill="url(#bill)" stroke="#776958" stroke-width="1.3"/>
+   <path d="M790 171 Q817 166 850 185 Q945 223 1009 252" fill="none" stroke="#fff0c8" stroke-width="2.5"/>
+   <path d="M790 182 Q828 188 863 204 L1007 255 Q998 253 979 249 Q886 222 827 201Z" fill="#a98d70" opacity=".57"/>
+   <path d="M782 189 C835 200 952 247 1007 258" fill="none" stroke="#53493e" stroke-width="2.4"/>
+   <path d="M1000 246q22 4 12 17l-7 6 3-11z" fill="#b17b57"/><g id="billMarks"/>
+   <path d="M749 170 Q755 154 773 155 Q783 155 791 165 Q797 169 804 170 Q796 169 786 175 Q776 185 762 182 Q751 181 749 170Z" fill="#a3977d"/>
+   <path d="M753 169 Q760 159 772 157 Q782 158 787 169 Q779 179 769 180 Q757 180 753 173Z" fill="#bbb499"/>
+   <ellipse cx="770" cy="169.5" rx="8.9" ry="8.3" fill="#696552"/><circle cx="770" cy="169.5" r="6.9" fill="#d5c48f"/><circle cx="770.7" cy="169.6" r="4.9" fill="#322f28"/><circle cx="769" cy="167" r="1.7" fill="#fff9df"/>
+   <path d="M755 164q14-15 28-1" fill="none" stroke="#eee0b6" stroke-width="2.6"/>
+   <path d="M803 174q9-1 15 3-8 0-15-1z" fill="#7b6c57"/>
+  </g>
+ </g>
+</g>
+<g id="foreground"/><rect x="-1440" y="-1100" width="4320" height="3200" fill="url(#paper)" opacity=".15" pointer-events="none" style="mix-blend-mode:multiply"/>
+</svg></main>
+<footer><div class="caption"><b>海岸骑行</b><i>Pelecanus occidentalis</i></div><div class="controls"><button id="speed" aria-label="切换播放速度" title="切换播放速度">1×</button><button id="play" aria-label="暂停动画" title="暂停动画（空格）"></button></div></footer>
+<script>
+'use strict';
+const NS='http://www.w3.org/2000/svg';
+const byId=id=>document.getElementById(id);
+function svg(parent,tag,attrs={}){const node=document.createElementNS(NS,tag); for(const [key,value] of Object.entries(attrs))node.setAttribute(key,value); parent.appendChild(node);return node}
+function path(parent,d,fill,stroke='none',width=1,extra={}){return svg(parent,'path',{d,fill,stroke,'stroke-width':width,'stroke-linecap':'round','stroke-linejoin':'round',...extra})}
+const group=(parent,attrs)=>svg(parent,'g',attrs);
+let seed=57113;
+function rand(a=0,b=1){seed=(Math.imul(1664525,seed)+1013904223)>>>0;return a+(b-a)*seed/4294967296}
+const pick=a=>a[Math.floor(rand(0,a.length))];
+const TAU=Math.PI*2;
+function samplePath(points){return 'M'+points.map(([x,y])=>x.toFixed(2)+' '+y.toFixed(2)).join(' L')}
+// All repeating terrain tiles share exactly the same source drawing at either edge.
+const scrollLayers=[];
+function tiled(parent,width,speed,draw){const id='tile'+scrollLayers.length,source=group(byId('defs'),{id});draw(source);
+  const strip=group(parent);strip.style.willChange='transform';for(let i=-1;i<=2;i++)svg(strip,'use',{href:'#'+id,x:i*width});scrollLayers.push({strip,width,speed});}
+function terrain(x,phase){return Math.sin(x*.007+phase)*.45+Math.sin(x*.018+phase*1.6)*.22+Math.sin(x*.043+phase*3)*.09}
+for(let i=0;i<32;i++){const x=rand(-500,1600),y=rand(210,470),w=rand(44,210),h=rand(2,10);
+ path(byId('clouds'),`M${x} ${y}q${w*.2} ${-h*.8} ${w*.41} ${-h*.55}t${w*.59} ${-h*.4}q${-w*.49} ${h*1.2} ${-w} ${h*.95}z`,pick(['#fbefcf','#f3e3cc','#aaaeb0']),'none',0,{opacity:rand(.12,.35),'filter':'url(#soft)'})}
+for(let j=0;j<3;j++){const pts=[];for(let x=-1440;x<=2890;x+=8){const v=Math.pow(.5+.5*Math.cos(x*.0041+j*1.4),1.5);pts.push([x,505-(1-j*.15)*(10+v*(37+terrain(x,j)*25))+j*3])}
+path(byId('hills'),samplePath(pts)+' V511 H-1440Z',['#c1c0b2','#b5b8ab','#abb1a3'][j]);
+for(let k=0;k<pts.length-2;k+=2){const [x,y]=pts[k],drop=(505-y)*rand(.22,.84);path(byId('hills'),`M${x} ${y+1}q-12 3 -27 ${drop}q12 -6 26 ${-drop*.55}l11 ${-drop*.27}Z`,j===2?'#949e92':'#a2aba1','none',0,{opacity:rand(.07,.24)})}}
+for(let i=0;i<7;i++){let x=rand(968,1145),y=rand(339,403),s=rand(.38,.88);path(byId('gulls'),'M-11 1Q-5-4 0 1Q5-6 11-5Q5-4 1 3Q-5-1-11 1Z','#646e66','none',0,{transform:`translate(${x} ${y}) rotate(${rand(-15,14)}) scale(${s})`,opacity:.7})}
+tiled(byId('water'),1440,.009,g=>{for(let i=0;i<700;i++){let x=rand(0,1440),y=rand(507,627),w=rand(3,36)*(1+(y-505)/150);path(g,`M${x} ${y}q${w*.45} -1 ${w} 0`,'none',pick(['#f5e2bc','#e4d8b8','#778f87','#8eaaa0']),rand(.4,1.4),{opacity:rand(.2,.68)})}});
+for(let i=0;i<375;i++){const y=rand(506,617),t=(y-505)/112,x=252+(rand(-1,1)+rand(-1,1)+rand(-1,1))*(21+t*55),w=rand(2,13)*(1+t);
+ path(byId('glitter'),`M${x} ${y}q${w*.4} -1 ${w} -.3`,'none','#ffe8b7',rand(.55,1.4),{opacity:rand(.32,.78)})}
+function grass(g,x,y,h,c,dense){const n=dense?10:5;let d='';for(let i=0;i<n;i++){const a=rand(-.62,.73),l=h*rand(.42,1.05),w=rand(.02,.06)*h;d+=`M${x+rand(-2,2)} ${y}q${a*l*.22-w} ${-l*.45} ${a*l} ${-l}q${-a*l*.53} ${l*.59} ${-a*l+w} ${l}Z`}path(g,d,c)}
+tiled(byId('dunes'),1440,.13,g=>{for(let j=0;j<3;j++){let pts=[];for(let x=0;x<=1440;x+=6){const a=x*TAU/1440;pts.push([x,585+j*27+Math.sin(a*3+j*2)*7+Math.sin(a*7+j)*3+rand(-1.3,1.3)])}
+path(g,samplePath(pts)+'V660H0Z',['#adb294','#9da786','url(#dune)'][j]);
+for(let i=0;i<245;i++){let p=pick(pts);grass(g,p[0],p[1]+rand(0,12),rand(3,13),pick(['#929977','#aaab81','#b4b18a','#858c70','#c2ba90']))}}});
+tiled(byId('sand'),1440,1,g=>{for(let i=0;i<800;i++){let x=rand(0,1440),y=rand(656,1040),s=(y-626)/170;path(g,`M${x} ${y}q${s*rand(1,6)} ${-s*rand(.1,1.3)} ${s*rand(7,23)} ${-s*rand(-.3,.8)}`,'none',pick(['#8c856d','#f0ddbc','#a89d82','#dfd1ad']),rand(.45,1.45),{opacity:rand(.22,.62)})}});
+tiled(byId('verge'),1440,.56,g=>{let pts=[];for(let x=0;x<=1440;x+=6)pts.push([x,660+Math.cos(x*TAU/1440*3)*4+rand(-1.5,1.5)]);path(g,'M0 646H1440 '+samplePath(pts.reverse()).replace('M','L')+'Z','#989776');
+ for(let i=0;i<280;i++){let x=rand(0,1440);grass(g,x,rand(650,666),rand(3,12),pick(['#898c6d','#a7a581','#bbb28c','#979475']))}});
+// Machined rims, tangent-laced spokes, gum sidewalls and a separate rotating valve.
+function circle(g,cx,cy,r,fill,stroke='none',width=1){return svg(g,'circle',{cx,cy,r,fill,stroke,'stroke-width':width})}
+function wheel(id){
+ const g=byId(id),spin=group(g),r=118;
+ for(const [radius,stroke,w] of [[117.8,'#383b36',12.4],[118.6,'#53544a',7.9],[116,'#b39a74',6.2],[115.8,'#ccb894',3.3],[112.7,'#4a504a',3.3],[111.9,'#d8d9c6',2.1],[110.3,'#7f8981',1.6]])circle(g,0,0,radius,'none',stroke,w);
+ for(let i=0;i<36;i++){const a=i*TAU/36,b=a+(i%2?.99:-.99),rx=110.7*Math.cos(a),ry=110.7*Math.sin(a);
+ path(spin,`M${rx} ${ry}L${8*Math.cos(b)} ${8*Math.sin(b)}`,'none',i%2?'#7c8177':'#9aa398',i%2?.95:1.15);
+ path(spin,`M${rx} ${ry}l${-Math.cos(a)*4} ${-Math.sin(a)*4}`,'none','#545d55',1.9)}
+ path(spin,'M0-110v8','none','#4f554d',2.4);circle(spin,0,0,10,'url(#steel)','#555e55',1.4);circle(spin,0,0,5,'#6c746c','#cccebc',1.6);
+ const tread=circle(spin,0,0,r+4.5,'none','#858578',.9);tread.setAttribute('stroke-dasharray','1 4.3');return spin}
+const wheels=[wheel('backWheel'),wheel('frontWheel')];
+const frame=byId('frame');
+function tube(g,d,width,paint=true){path(g,d,'none',paint?'#273c36':'#525b54',width+1.8);path(g,d,'none',paint?'#46665a':'#9ba59a',width);path(g,d,'none',paint?'#8da798':'#e2e3d0',Math.max(1,width*.18),{transform:'translate(-1 -1.5)'})}
+// The seat stays, mudguards and luggage rack sit behind the main triangle.
+tube(frame,'M540 647L625 490',5);tube(frame,'M540 647L710 652',6.5);
+for(const [x,y] of [[540,647],[915,647]]){const d=`M${x-129} ${y+5}A129 129 0 0 1 ${x+105} ${y-75}`;path(frame,d,'none','#424f45',6);path(frame,d,'none','#879a89',3.4);
+path(frame,`M${x-124} ${y-28}L${x} ${y}L${x-101} ${y-75}`,'none','#7f897b',1.8)}
+tube(frame,'M440 508L582 508Q590 509 597 514',3.2,false);tube(frame,'M451 511L540 647L565 511',2,false);
+tube(frame,'M624 486L710 652',12);tube(frame,'M630 495L867 486',11);tube(frame,'M710 651L877 523',13.4);tube(frame,'M863 471L878 526',13);
+tube(frame,'M879 526Q893 593 904 629Q908 642 915 647',8.4);
+tube(frame,'M623 485L612 454',8,false);tube(frame,'M864 472L852 432L833 421',7,false);
+for(const [x,y,a] of [[630,495,-25],[866,480,-16],[876,520,-15],[708,647,-26]])path(frame,`M${x-6} ${y}h12`,'none','#c0bd94',2.4,{transform:`rotate(${a} ${x} ${y})`});
+path(frame,'M851 432Q876 417 900 450Q928 494 891 529Q884 535 881 555','none','#505952',1.8);
+tube(frame,'M850 430Q855 417 846 413Q838 407 826 412L805 422',6.4,false);
+path(frame,'M829 412l-27 12','none','#463c30',10);path(frame,'M829 412l-27 12','none','#966c47',7.7);
+for(let i=0;i<7;i++)path(frame,`M${803+i*3.5} ${420-i*1.48}l2.2 6`,'none','#604a36',1);
+path(frame,'M580 454q13 20 43 12l21-12','none','#677067',3);path(frame,'M571 447q9-12 38-4 17 5 42 2 10 1 10 7-3 7-23 7l-43 1q-21-1-24-13Z','url(#leather)','#4e4133',1.6);
+path(frame,'M578 447q12-5 31 0 15 5 39 2','none','#dbb98b',1.6);circle(frame,583,452,2,'#d1c5a3');circle(frame,649,452,1.5,'#d1c5a3');
+// Headlamp, bracket, lens and hub nuts.
+tube(frame,'M872 484L898 475L901 466',3,false);path(frame,'M885 460q3-12 18-13l10 1 2 19-11 3q-15 2-19-10Z','url(#steel)','#596359',1.4);
+svg(frame,'ellipse',{cx:914,cy:458,rx:4,ry:10,fill:'#f4e3b6',stroke:'#8c927d','stroke-width':2});
+const drive=byId('drive'),ring=group(drive,{transform:'translate(710 652)'}),sprocket=group(ring);
+circle(drive,540,647,12,'url(#steel)','#555a4e',1.7);
+const chainD='M539 635L706 620A32 32 0 1 1 707 684L539 659A12 12 0 0 1 539 635Z';
+path(drive,chainD,'none','#4c5045',4.1);const links=path(drive,chainD,'none','#c1c0a7',1.85,{'stroke-dasharray':'2 3'});
+circle(sprocket,0,0,30.5,'none','#505b4f',5);circle(sprocket,0,0,28.8,'none','url(#steel)',3.6);
+for(let i=0;i<5;i++)path(sprocket,'M-3-3Q-3-17-12-26l7-3Q-1-18 5-10L9-3Z','url(#steel)','#60685e',.7,{transform:`rotate(${i*72})`});
+circle(ring,0,0,8,'url(#steel)','#525b51',1.3);
+// Feather vanes have an asymmetric silhouette, a rachis and slanting pairs of barbs.
+const palettes={
+ primary:['#343833','#53534b','#6c695d','#444740','#aaa692'],
+ secondary:['#454a45','#74766b','#99998a','#60645c','#c6c4ac'],
+ mantle:['#666b61','#aaa99a','#d5d1b9','#818477','#e8dfc3'],
+ silver:['#797d70','#c0bcaa','#dfd8bd','#9a9c8c','#f1e6c9'],
+ warm:['#625d50','#9e927a','#c1b298','#847b68','#ded0b1'],
+ dark:['#373b34','#565a50','#77776a','#4f544b','#adae98']};
+for(const [name,stops] of Object.entries(palettes)){const grad=svg(byId('defs'),'linearGradient',{id:'plume-'+name,x1:0,y1:0,x2:.12,y2:1});[0,.22,.43,.57,1].forEach((offset,i)=>svg(grad,'stop',{offset,'stop-color':stops[[0,1,2,1,3][i]]}))}
+function feather(g,x,y,tx,ty,w,palette,bend=0,detail=8){
+ const L=Math.hypot(tx-x,ty-y),a=Math.atan2(ty-y,tx-x)*180/Math.PI,base=group(g,{transform:`translate(${x} ${y}) rotate(${a})`}),pal=palettes[palette];
+ path(base,`M0 0C${L*.18} ${-w*.64} ${L*.56} ${bend-w*.65} ${L*.78} ${bend-w*.32}Q${L*.91} ${bend-w*.14} ${L} ${bend}Q${L*.78} ${bend+w*.52} ${L*.45} ${bend+w*.47}Q${L*.15} ${w*.46} 0 0Z`,'url(#plume-'+palette+')',pal[0],.65);
+ path(base,`M${L*.08} 0Q${L*.56} ${bend-w*.05} ${L*.97} ${bend}`,'none',pal[4],Math.max(.55,w*.051),{opacity:.84});
+ let barbs='';for(let i=0;i<detail;i++){const t=(i+1)/(detail+1)*.85,half=Math.sin(Math.PI*t)*w*.36,yy=bend*t*(2-t);barbs+=`M${L*t} ${yy}q${L*.069} ${-half*.55} ${L*.12} ${-half}M${L*t} ${yy+.5}q${L*.045} ${half*.49} ${L*.09} ${half*.84}`}
+ path(base,barbs,'none',pal[0],.53,{opacity:.5});return base}
+const tail=byId('tail');
+for(let i=0;i<9;i++)feather(tail,583+i*5,366+i*1.6,429+i*5,400+i*4,15+i*.6,i%3?'primary':'dark',-3,12);
+const farWing=byId('farWing');
+path(farWing,'M723 319Q759 306 776 334Q795 375 826 398L847 408Q855 413 847 420Q824 425 801 410Q747 383 706 352Z','url(#body)','#777968',1.3);
+for(let i=0;i<7;i++)feather(farWing,745+i*3,333+i*4,848-i*3,412+i*1.4,14-i*.5,i<3?'secondary':'dark',3,10);
+// Short body feathers follow the belly instead of a regular scale pattern.
+const breast=byId('breast');
+for(let i=0;i<1300;i++){const x=rand(456,797),y=rand(288,478),l=rand(6,17),dx=-5-(x-640)*.06+rand(-2,2);
+ path(breast,`M${x} ${y}q${dx*.2} ${l*.7} ${dx} ${l}q4 -1 6 -5`,'none',pick(['#d3c6a9','#575c52','#c1b69c','#796e5f']),rand(.4,1.05),{opacity:rand(.14,.45)})}
+const wing=byId('wing');
+path(wing,'M743 318C728 290 696 282 658 291C613 305 581 330 549 346L440 391Q488 419 572 411C637 414 704 382 737 349Q751 333 743 318Z','url(#plume-mantle)','#777969',.8);
+for(let i=0;i<12;i++){const t=i/11;feather(wing,635+32*t,321+46*t,438+31*t,376+54*t,16+3*t,i%4?'primary':'dark',-3,17)}
+for(let i=0;i<12;i++){const t=i/11;feather(wing,662+45*t,306+43*t,478+86*t,359+54*t+Math.sin(t*3)*9,19+7*t,i%4?'secondary':'dark',-5,14)}
+for(let i=0;i<13;i++){const t=i/12;feather(wing,691+29*t,296+43*t,517+95*t,345+55*t+Math.sin(t*3)*8,18+6*t,i%4===1?'warm':'mantle',-7,13)}
+for(let i=0;i<15;i++){const t=i/14;feather(wing,706+28*t,292+42*t,559+96*t,322+53*t+Math.sin(t*3)*6,12+10*t,i%4===3?'mantle':'silver',-5,11)}
+for(let i=0;i<17;i++){const t=i/16;feather(wing,704+37*t,290+39*t,609+78*t+rand(-8,8),303+58*t,9+7*t,i%4===2?'warm':'silver',-3,9)}
+// The shoulder's short, tapered coverts bridge the long scapulars and the breast.
+for(let i=0;i<60;i++){const t=i/59,x=705+40*Math.sin(t*2.12),y=292+t*49;
+ const l=rand(19,40);feather(wing,x,y,x-l,y+l*(.14+.64*t),rand(4,8),i%4===0?'warm':'mantle',rand(-2,1),4)}
+// Nape plumes are chestnut on the back, pale along the throat.
+for(const [id,n] of [['neckFibres',1550],['headFibres',1250]]){const g=byId(id),neck=id==='neckFibres';
+ for(let i=0;i<n;i++){const x=rand(692,812),y=neck?rand(158,391):rand(122,225);
+ const dx=neck?(y<240?-6:y<298?8:-9)+rand(-4,4):-(779-x)*.18-4+rand(-4,4);
+ const l=neck?rand(8,24):rand(3,12),p=neck?['#f9ecc8','#655443','#e6cfaa','#fff1ca']:['#fcf0c6','#f3dca4','#a08c68','#d2b47e'];
+ path(g,`M${x} ${y}q${dx*.23} ${l*.56} ${dx} ${l}`,'none',pick(p),rand(.3,1),{opacity:rand(.14,.48)})}}
+// Individual crest tips break the otherwise smooth silhouette.
+const crest=group(byId('skull'));byId('skull').insertBefore(crest,byId('skull').firstChild);
+for(let i=0;i<70;i++){const a=rand(3.05,4.8),x=751+46*Math.cos(a),y=171+40*Math.sin(a),l=rand(3,11);path(crest,`M${x+3} ${y+4}q-6 -1 ${-l} ${rand(-3,4)}q5 -4 10 -4Z`,pick(['#d7c18d','#dfc788','#ebd397']))}
+for(let i=0;i<73;i++){let t=i/72;let x=777+201*t,y=193+60*t;
+ path(byId('folds'),`M${x+rand(-2,2)} ${y}Q${x-12+9*t} ${y+34-13*t} ${818+177*t} ${293+36*Math.sin(t*3.4)-24*t}`,'none',i%3?'#9f674e':'#f6c08b',rand(.55,1.35),{opacity:rand(.28,.67)})}
+for(let i=0;i<230;i++){const t=rand(),x=800+203*t,y=172+80*t+rand(0,12)*(1-t);path(byId('billMarks'),`M${x} ${y}l${rand(1,5)} ${rand(.3,1.8)}`,'none',pick(['#937d64','#f8e3be']),.65,{opacity:.48})}
+// Each foot keeps contact with its own pedal. The hock is the rear solution
+// of a two-link leg, allowing it to open naturally at the bottom of the stroke.
+function leg(id,far){
+ const g=byId(id),upper=group(g),lower=group(g),foot=group(g);
+ path(upper,'M-13-6Q-17 10-9 42L-5 93Q-3 100 2 98L6 91 10 40Q18 14 12-4Z','url(#foot)','#6e6555',1.3);
+ path(upper,'M-14-6Q-18 13-10 34l3 13 2-7 3 9 4-8 3 5 7-23 2-23Z','url(#body)','#938b78',.7);
+ for(let i=0;i<60;i++){let x=rand(-9,9),y=rand(0,32);path(upper,`M${x} ${y}l${rand(-1,1)} ${rand(2,8)}`,'none',pick(['#c8bea3','#7e7c69']),.8)}
+ path(lower,'M-6 0Q-7-5-2-6Q4-8 6-1L4 61 3 111Q2 115-2 115L-4 108-6 33Z','url(#foot)','#686252',1.2);
+ for(const [grp,end,start,w] of [[lower,109,3,5],[upper,91,48,6]])for(let y=start;y<end;y+=3.6){let sw=w*(1-y/(end*2));path(grp,`M${-sw} ${y}q${sw} 2.5 ${sw*2} -.25`,'none',y%2>1?'#675e4c':'#d6c19a',.85,{opacity:.84})}
+ path(foot,'M-17 3h37','none','#595e54',6);path(foot,'M-15 2h32','none','#b7b6a0',1.8);
+ path(foot,'M-9-13Q-4-16 1-9Q9-7 24-5Q30-3 26-1L10-1Q21 3 18 5Q13 7-3 2Q2 7-3 7Q-13 4-17 0Q-17-5-9-13Z','url(#foot)','#645e4f',1.1);
+ path(foot,'M-9-9Q-1-3 24-2M-10-7Q1-1 16 4M-12-5L-3 5','none','#d0b790',1.15);
+ if(far){g.setAttribute('style','filter:brightness(.78)')}
+ return {upper,lower,foot}}
+const legs=[leg('nearLeg',false),leg('farLeg',true)];
+const cranks=[path(byId('nearLeg'),'','none','url(#steel)',7.4),path(byId('farLeg'),'','none','#777f72',6.5)];
+cranks.forEach(c=>c.parentNode.insertBefore(c,c.parentNode.firstChild));
+function poseLeg(link,idx,a,bob){const px=710+45*Math.cos(a),py=652+45*Math.sin(a),hx=idx?685:666,hy=(idx?458:459)+bob;
+ const ax=px-8,ay=py-10,dx=ax-hx,dy=ay-hy,dist=Math.hypot(dx,dy);
+ const u=120,l=124,proj=(dist*dist+u*u-l*l)/(2*dist),off=Math.sqrt(Math.max(0,u*u-proj*proj));
+ const jx=hx+(dx*proj-dy*off)/dist,jy=hy+(dy*proj+dx*off)/dist;
+ function segment(node,x,y,ex,ey,length){node.setAttribute('transform',`translate(${x} ${y}) rotate(${Math.atan2(ey-y,ex-x)*180/Math.PI-90}) scale(1 ${Math.hypot(ey-y,ex-x)/length})`)}
+ segment(link.upper,hx,hy,jx,jy,97);segment(link.lower,jx,jy,ax,ay,113);
+ link.foot.setAttribute('transform',`translate(${px} ${py}) rotate(${Math.cos(a)*7})`);
+ cranks[idx].setAttribute('d',`M710 652L${px} ${py}`)}
+// The nearest tufts enter from the lower edge and scroll with the sand.
+tiled(byId('foreground'),1440,1.09,g=>{for(let j=0;j<27;j++){const x=rand(0,1440),y=rand(878,973),h=rand(18,82);
+ for(let k=0;k<7;k++)grass(g,x+rand(-25,25),y+rand(-3,5),h*rand(.35,1),pick(['#77795d','#949071','#a19a76','#b4a781','#8d896b']));
+ for(let k=0;k<4;k++){const dx=rand(-28,32),dy=-h*rand(.7,1.3);path(g,`M${x} ${y}q${dx*.18} ${dy*.64} ${dx} ${dy}`,'none','#827e60',1.1);
+ path(g,`M${x+dx} ${y+dy}q-1 -7 6 -15q0 8 -6 15Z`,'#b5a47a')}}});
+const scene=byId('scene'),play=byId('play'),speedButton=byId('speed');
+function reframe(){const {width,height}=scene.getBoundingClientRect(),ratio=width/Math.max(height,1);
+ // A portrait canvas gives the entire bicycle room, including both mudguards.
+ const w=Math.max(745,Math.min(1750,ratio*900)),h=w/ratio;
+ const cy=Math.min(453,453+(900-h)*.02);
+ scene.setAttribute('viewBox',`${732-w/2} ${cy-h/2} ${w} ${h}`)}
+new ResizeObserver(reframe).observe(scene);
+const motion=matchMedia('(prefers-reduced-motion: reduce)');
+let playing=!motion.matches,speed=1,elapsed=.39,last=null,request=0;
+const rider=byId('rider'),skull=byId('skull');
+rider.style.transformOrigin='657px 448px';skull.style.transformOrigin='745px 215px';
+for(const node of [rider,skull,...wheels])node.style.willChange='transform';
+function render(t){const a=t*TAU*.59,bob=(Math.cos(a*2)-.1)*1.85,travel=t*TAU*.59*(31/12)*124;
+ wheels.forEach(w=>w.style.transform=`rotate(${travel/124}rad)`);
+ sprocket.setAttribute('transform',`rotate(${a*180/Math.PI})`);links.setAttribute('stroke-dashoffset',String(-(a*31)%5));
+ poseLeg(legs[0],0,a,bob);poseLeg(legs[1],1,a+Math.PI,bob);
+ rider.style.transform=`translateY(${bob}px) rotate(${Math.sin(a)*.45}deg)`;
+ skull.style.transform=`rotate(${Math.sin(a+.4)*.72}deg)`;
+ for(const {strip,width,speed} of scrollLayers)strip.style.transform=`translateX(${-(travel*speed%width)}px)`;
+ byId('gulls').setAttribute('transform',`translate(${Math.sin(t*.055)*52} ${Math.sin(t*.26)*4})`);
+}
+function frameTick(now){request=0;if(!playing||document.hidden){last=null;return}if(last!==null)elapsed+=(now-last)/1000*speed;last=now;render(elapsed);request=requestAnimationFrame(frameTick)}
+function syncPlay(){cancelAnimationFrame(request);last=null;const action=playing?'暂停动画':'播放动画';play.setAttribute('aria-label',action);play.title=action+'（空格）';
+ play.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">'+(playing?'<path d="M3 2h3.5v12H3zM9.5 2H13v12H9.5z"/>':'<path d="M4 2l9 6-9 6z"/>')+'</svg>';if(playing&&!document.hidden)request=requestAnimationFrame(frameTick)}
+play.addEventListener('click',()=>{playing=!playing;syncPlay()});
+speedButton.addEventListener('click',()=>{speed=({1:.5,.5:.25,.25:1})[speed];speedButton.textContent=speed+'×';speedButton.setAttribute('aria-label','切换播放速度，当前 '+speed+' 倍')});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&e.target.tagName!=='BUTTON'){e.preventDefault();play.click()}});
+document.addEventListener('visibilitychange',syncPlay);motion.addEventListener('change',e=>{playing=!e.matches;syncPlay()});
+reframe();render(elapsed);syncPlay();
+</script>
+</html>

@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>海岸鹈鹕骑行 · 写实SVG 2D动画</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #10161f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: #eef3f7;
+      user-select: none;
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 35%, #1d2838 0%, #0d131b 100%);
+    }
+
+    #scene {
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 100vh;
+      display: block;
+      filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
+    }
+
+    /* Subtle floating HUD */
+    .hud {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: rgba(15, 22, 32, 0.62);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+      z-index: 20;
+      transition: opacity 0.25s ease;
+    }
+
+    .hud-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f3f7fa;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+    }
+
+    .hud-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.34);
+    }
+
+    .hud-btn:active {
+      transform: scale(0.96);
+    }
+
+    .hud-btn.active {
+      background: rgba(244, 169, 73, 0.28);
+      border-color: rgba(244, 169, 73, 0.72);
+      color: #ffdfad;
+    }
+
+    .hud-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .speed-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(238, 243, 247, 0.85);
+    }
+
+    .speed-wrap input[type="range"] {
+      width: 92px;
+      accent-color: #f0a74b;
+      cursor: pointer;
+    }
+
+    .speed-val {
+      min-width: 34px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #ffd9a0;
+      font-weight: 600;
+    }
+
+    .theme-group {
+      display: inline-flex;
+      gap: 5px;
+    }
+
+    .badge-hint {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: rgba(245, 248, 252, 0.78);
+      background: rgba(15, 22, 32, 0.42);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      pointer-events: none;
+    }
+
+    @media (max-width: 780px) {
+      .hud {
+        flex-wrap: wrap;
+        justify-content: center;
+        border-radius: 20px;
+        width: calc(100vw - 24px);
+        bottom: 12px;
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .hud-divider { display: none; }
+      .badge-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="badge-hint">点击车铃或按 B 响铃 · 空格暂停</div>
+
+    <svg id="scene" viewBox="0 0 1400 820" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="写实风格鹈鹕骑自行车2D动画">
+      <defs>
+        <!-- ================= SKY & ATMOSPHERE GRADIENTS ================= -->
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop id="skyStop0" offset="0%" stop-color="#356898" />
+          <stop id="skyStop1" offset="38%" stop-color="#6a9ec2" />
+          <stop id="skyStop2" offset="74%" stop-color="#d7c5ab" />
+          <stop id="skyStop3" offset="100%" stop-color="#f5c68c" />
+        </linearGradient>
+
+        <radialGradient id="sunGlow" cx="0.78" cy="0.28" r="0.48">
+          <stop id="sunGlow0" offset="0%" stop-color="#fff8df" stop-opacity="0.95" />
+          <stop id="sunGlow1" offset="18%" stop-color="#ffd995" stop-opacity="0.58" />
+          <stop id="sunGlow2" offset="52%" stop-color="#f3a867" stop-opacity="0.18" />
+          <stop id="sunGlow3" offset="100%" stop-color="#f3a867" stop-opacity="0" />
+        </radialGradient>
+
+        <linearGradient id="oceanGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop id="oceanStop0" offset="0%" stop-color="#4e7fa0" />
+          <stop id="oceanStop1" offset="28%" stop-color="#3b6b8d" />
+          <stop id="oceanStop2" offset="75%" stop-color="#2c5372" />
+          <stop id="oceanStop3" offset="100%" stop-color="#214059" />
+        </linearGradient>
+
+        <linearGradient id="sunPathWater" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffefc4" stop-opacity="0.72" />
+          <stop offset="45%" stop-color="#f7c87e" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#f7c87e" stop-opacity="0" />
+        </linearGradient>
+
+        <linearGradient id="headlandGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6b8499" stop-opacity="0.75" />
+          <stop offset="100%" stop-color="#8a9da8" stop-opacity="0.35" />
+        </linearGradient>
+
+        <linearGradient id="seawallGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c9bfb1" />
+          <stop offset="22%" stop-color="#b0a596" />
+          <stop offset="100%" stop-color="#847b70" />
+        </linearGradient>
+
+        <linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6d6f74" />
+          <stop offset="14%" stop-color="#585b61" />
+          <stop offset="68%" stop-color="#474a50" />
+          <stop offset="100%" stop-color="#35383d" />
+        </linearGradient>
+
+        <linearGradient id="curbGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#d7cfc2" />
+          <stop offset="55%" stop-color="#b6ada0" />
+          <stop offset="100%" stop-color="#8e867c" />
+        </linearGradient>
+
+        <linearGradient id="woodPostGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#6b5442" />
+          <stop offset="35%" stop-color="#967a62" />
+          <stop offset="78%" stop-color="#7c624d" />
+          <stop offset="100%" stop-color="#4d3b2d" />
+        </linearGradient>
+
+        <!-- ================= BICYCLE METALLIC & MATERIAL GRADIENTS ================= -->
+        <!-- Vintage British Racing Teal-Green Steel Frame -->
+        <linearGradient id="frameTubeVert" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#13312f" />
+          <stop offset="28%" stop-color="#225752" />
+          <stop offset="52%" stop-color="#43877e" />
+          <stop offset="66%" stop-color="#69b0a4" />
+          <stop offset="82%" stop-color="#1e4c47" />
+          <stop offset="100%" stop-color="#0d2422" />
+        </linearGradient>
+
+        <linearGradient id="frameTubeHoriz" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#153835" />
+          <stop offset="22%" stop-color="#599f94" />
+          <stop offset="38%" stop-color="#8ad0c3" />
+          <stop offset="58%" stop-color="#235a54" />
+          <stop offset="84%" stop-color="#143633" />
+          <stop offset="100%" stop-color="#0c201f" />
+        </linearGradient>
+
+        <linearGradient id="frameDarkTube" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0f2826" />
+          <stop offset="35%" stop-color="#2b615b" />
+          <stop offset="100%" stop-color="#0a1c1b" />
+        </linearGradient>
+
+        <!-- Polished Chrome & Brushed Aluminum -->
+        <linearGradient id="chromeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7c8791" />
+          <stop offset="20%" stop-color="#eef4f8" />
+          <stop offset="36%" stop-color="#ffffff" />
+          <stop offset="58%" stop-color="#8b96a0" />
+          <stop offset="82%" stop-color="#cfd8df" />
+          <stop offset="100%" stop-color="#4e5861" />
+        </linearGradient>
+
+        <linearGradient id="chromeHoriz" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#5d666e" />
+          <stop offset="26%" stop-color="#f2f7fa" />
+          <stop offset="48%" stop-color="#ffffff" />
+          <stop offset="72%" stop-color="#88929b" />
+          <stop offset="100%" stop-color="#454d55" />
+        </linearGradient>
+
+        <linearGradient id="brassGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fff0b3" />
+          <stop offset="35%" stop-color="#dba445" />
+          <stop offset="75%" stop-color="#9e6d22" />
+          <stop offset="100%" stop-color="#5f3d0e" />
+        </linearGradient>
+
+        <!-- Brooks Leather Saddle & Grips -->
+        <linearGradient id="leatherGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#8f5331" />
+          <stop offset="28%" stop-color="#6e3c20" />
+          <stop offset="70%" stop-color="#4c2612" />
+          <stop offset="100%" stop-color="#2d1408" />
+        </linearGradient>
+
+        <linearGradient id="leatherHighlight" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#b57147" stop-opacity="0.1" />
+          <stop offset="45%" stop-color="#c98559" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="#7c4424" stop-opacity="0.1" />
+        </linearGradient>
+
+        <!-- Tire & Rim -->
+        <radialGradient id="tireGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="85%" stop-color="#25282c" />
+          <stop offset="91%" stop-color="#393d43" />
+          <stop offset="96%" stop-color="#1e2024" />
+          <stop offset="100%" stop-color="#15171a" />
+        </radialGradient>
+
+        <linearGradient id="rimMetallic" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#d5dde3" />
+          <stop offset="28%" stop-color="#ffffff" />
+          <stop offset="55%" stop-color="#909aa3" />
+          <stop offset="78%" stop-color="#e3eaef" />
+          <stop offset="100%" stop-color="#6b747d" />
+        </linearGradient>
+
+        <linearGradient id="fenderGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4e8f86" />
+          <stop offset="35%" stop-color="#255a54" />
+          <stop offset="75%" stop-color="#143734" />
+          <stop offset="100%" stop-color="#0b201e" />
+        </linearGradient>
+
+        <!-- ================= REALISTIC PELICAN PLUMAGE & ANATOMY GRADIENTS ================= -->
+        <!-- Main sunlit ivory-white body plumage with warm golden breast & cool sky-blue shadow -->
+        <radialGradient id="pelicanBodyGrad" cx="0.62" cy="0.28" r="0.72">
+          <stop offset="0%" stop-color="#fffcf4" />
+          <stop offset="36%" stop-color="#f7efe0" />
+          <stop offset="68%" stop-color="#e1d9cd" />
+          <stop offset="88%" stop-color="#bcc4ce" />
+          <stop offset="100%" stop-color="#96a3b3" />
+        </radialGradient>
+
+        <!-- Subtle peach-gold breeding breast blush -->
+        <radialGradient id="breastBlush" cx="0.6" cy="0.45" r="0.55">
+          <stop offset="0%" stop-color="#f7d3a3" stop-opacity="0.52" />
+          <stop offset="60%" stop-color="#efd4b3" stop-opacity="0.2" />
+          <stop offset="100%" stop-color="#efd4b3" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- Neck cylindrical feather lighting -->
+        <linearGradient id="neckGrad" x1="0" y1="0" x2="1" y2="0.2">
+          <stop offset="0%" stop-color="#b7c0cc" />
+          <stop offset="28%" stop-color="#e9e4da" />
+          <stop offset="62%" stop-color="#fcf7ec" />
+          <stop offset="88%" stop-color="#fffdf8" />
+          <stop offset="100%" stop-color="#f7e3c4" />
+        </linearGradient>
+
+        <!-- Head feather shading -->
+        <radialGradient id="headGrad" cx="0.65" cy="0.3" r="0.68">
+          <stop offset="0%" stop-color="#fffdf7" />
+          <stop offset="48%" stop-color="#f4ece0" />
+          <stop offset="82%" stop-color="#d4d2cc" />
+          <stop offset="100%" stop-color="#aeb7c4" />
+        </radialGradient>
+
+        <!-- Near wing sunlit coverts -->
+        <linearGradient id="wingCovertGrad" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stop-color="#fffcf4" />
+          <stop offset="42%" stop-color="#f2eadc" />
+          <stop offset="76%" stop-color="#d5d4d0" />
+          <stop offset="100%" stop-color="#a8b1be" />
+        </linearGradient>
+
+        <!-- Far wing shaded behind body -->
+        <linearGradient id="farWingGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#c9cfd7" />
+          <stop offset="55%" stop-color="#a4aebc" />
+          <stop offset="100%" stop-color="#7b8696" />
+        </linearGradient>
+
+        <!-- Jet charcoal-slate primary flight feathers -->
+        <linearGradient id="primaryFeatherGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4e5561" />
+          <stop offset="35%" stop-color="#2c323b" />
+          <stop offset="78%" stop-color="#1b1f26" />
+          <stop offset="100%" stop-color="#111419" />
+        </linearGradient>
+
+        <!-- Realistic Pelican Upper Bill (keratin ridge with pearlescent coral-amber hues) -->
+        <linearGradient id="upperBillGrad" x1="0" y1="0" x2="0.15" y2="1">
+          <stop offset="0%" stop-color="#fff0d4" />
+          <stop offset="18%" stop-color="#f0b66b" />
+          <stop offset="52%" stop-color="#df8c42" />
+          <stop offset="82%" stop-color="#c96b34" />
+          <stop offset="100%" stop-color="#9e4d24" />
+        </linearGradient>
+
+        <linearGradient id="billCulmenRidge" x1="0" y1="0" x2="1" y2="0.15">
+          <stop offset="0%" stop-color="#e5c8b6" />
+          <stop offset="35%" stop-color="#f6dcc0" />
+          <stop offset="72%" stop-color="#f2b872" />
+          <stop offset="100%" stop-color="#d96732" />
+        </linearGradient>
+
+        <!-- Translucent Subsurface-Lit Gular Throat Pouch -->
+        <radialGradient id="pouchGrad" cx="0.52" cy="0.46" r="0.62">
+          <stop offset="0%" stop-color="#ffca69" />
+          <stop offset="38%" stop-color="#f29b3e" />
+          <stop offset="72%" stop-color="#d9712b" />
+          <stop offset="92%" stop-color="#b54e1d" />
+          <stop offset="100%" stop-color="#8c3915" />
+        </radialGradient>
+
+        <linearGradient id="pouchRimLight" x1="0" y1="1" x2="0.3" y2="0">
+          <stop offset="0%" stop-color="#ffe699" stop-opacity="0.7" />
+          <stop offset="45%" stop-color="#ffbb55" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#f08a2e" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- Pelican Legs & Webbed Feet -->
+        <linearGradient id="legOrangeNear" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#b44f1c" />
+          <stop offset="34%" stop-color="#e67e30" />
+          <stop offset="68%" stop-color="#f7a44a" />
+          <stop offset="100%" stop-color="#bf5821" />
+        </linearGradient>
+
+        <linearGradient id="legOrangeFar" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7c3614" />
+          <stop offset="50%" stop-color="#b25a24" />
+          <stop offset="100%" stop-color="#733011" />
+        </linearGradient>
+
+        <linearGradient id="webbingGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f39c44" />
+          <stop offset="65%" stop-color="#d46e26" />
+          <stop offset="100%" stop-color="#a34917" />
+        </linearGradient>
+
+        <linearGradient id="thighPlumageNear" x1="0" y1="0" x2="1" y2="0.4">
+          <stop offset="0%" stop-color="#bcc3ce" />
+          <stop offset="45%" stop-color="#ece6dc" />
+          <stop offset="85%" stop-color="#fffbf2" />
+          <stop offset="100%" stop-color="#d7d2c9" />
+        </linearGradient>
+
+        <linearGradient id="thighPlumageFar" x1="0" y1="0" x2="1" y2="0.4">
+          <stop offset="0%" stop-color="#8b95a5" />
+          <stop offset="55%" stop-color="#b7bfcb" />
+          <stop offset="100%" stop-color="#9aa3b2" />
+        </linearGradient>
+
+        <!-- Soft realistic shadow & glow filters -->
+        <filter id="softBlur" x="-25%" y="-25%" width="150%" height="150%">
+          <feGaussianBlur stdDeviation="5" />
+        </filter>
+        <filter id="tinyBlur" x="-15%" y="-15%" width="130%" height="130%">
+          <feGaussianBlur stdDeviation="1.6" />
+        </filter>
+        <filter id="sunBlur" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+        <filter id="featherShadow" x="-12%" y="-12%" width="128%" height="128%">
+          <feDropShadow dx="-1.5" dy="2.5" stdDeviation="2.2" flood-color="#2c3a4d" flood-opacity="0.22" />
+        </filter>
+        <filter id="asphaltGrain" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="7" result="noise" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.9  0 0 0 0 0.92  0 0 0 0.08 0" in="noise" result="grain" />
+          <feComposite in="grain" in2="SourceGraphic" operator="in" />
+        </filter>
+
+        <!-- Clip paths -->
+        <clipPath id="oceanClip">
+          <rect x="0" y="458" width="1400" height="145" />
+        </clipPath>
+        <clipPath id="roadClip">
+          <rect x="0" y="608" width="1400" height="212" />
+        </clipPath>
+      </defs>
+
+      <!-- =============================================================== -->
+      <!-- 1. SKY, SUN & DISTANT COASTAL ATMOSPHERE                        -->
+      <!-- =============================================================== -->
+      <g id="layer-sky">
+        <rect x="0" y="0" width="1400" height="475" fill="url(#skyGrad)" />
+        <rect x="0" y="0" width="1400" height="475" fill="url(#sunGlow)" />
+
+        <!-- Sun disc -->
+        <g id="sun-group" transform="translate(1092, 224)">
+          <circle r="76" fill="#ffdf9b" opacity="0.26" filter="url(#sunBlur)" />
+          <circle r="38" fill="#fff3ce" opacity="0.72" filter="url(#softBlur)" />
+          <circle r="24" fill="#fffdf3" opacity="0.96" />
+        </g>
+
+        <!-- Soft realistic layered clouds (parallax slow) -->
+        <g id="clouds-far" opacity="0.72"></g>
+        <g id="clouds-near" opacity="0.82"></g>
+
+        <!-- Distant soaring seabirds -->
+        <g id="distant-birds" opacity="0.58"></g>
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 2. OCEAN, SUNLIT SHIMMER & DISTANT HEADLAND                     -->
+      <!-- =============================================================== -->
+      <g id="layer-ocean">
+        <!-- Distant misty headland & lighthouse silhouette -->
+        <g id="headland-parallax">
+          <path d="M -60 462 Q 110 432 270 444 Q 380 452 490 460 L 490 468 L -60 468 Z" fill="url(#headlandGrad)" />
+          <path d="M 880 462 Q 1030 434 1190 440 Q 1320 446 1460 460 L 1460 468 L 880 468 Z" fill="url(#headlandGrad)" opacity="0.78" />
+          <!-- Tiny distant coastal lighthouse -->
+          <g transform="translate(226, 426)" opacity="0.52">
+            <polygon points="-3,16 3,16 1.8,0 -1.8,0" fill="#dde3e8" />
+            <rect x="-2.4" y="-3" width="4.8" height="3" fill="#b45c4b" />
+            <circle cx="0" cy="-1.5" r="5" fill="#fff2b5" opacity="0.45" filter="url(#tinyBlur)" />
+          </g>
+        </g>
+
+        <!-- Ocean surface -->
+        <rect x="0" y="458" width="1400" height="146" fill="url(#oceanGrad)" />
+        <!-- Sun reflection path on ocean -->
+        <polygon points="1038,458 1146,458 1245,604 935,604" fill="url(#sunPathWater)" clip-path="url(#oceanClip)" />
+        <!-- Procedural sparkling water ripples -->
+        <g id="ocean-ripples" clip-path="url(#oceanClip)"></g>
+        <!-- Soft horizon atmospheric mist -->
+        <rect x="0" y="446" width="1400" height="28" fill="#f2d6b3" opacity="0.22" filter="url(#softBlur)" />
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 3. MIDGROUND COASTAL PROMENADE SEAWALL & WOODEN RAILING         -->
+      <!-- =============================================================== -->
+      <g id="layer-midground">
+        <!-- Low weathered stone/concrete coastal seawall -->
+        <rect x="0" y="562" width="1400" height="46" fill="url(#seawallGrad)" />
+        <rect x="0" y="558" width="1400" height="7" fill="#dfd5c6" />
+        <line x1="0" y1="565" x2="1400" y2="565" stroke="#857b6f" stroke-width="1.2" opacity="0.75" />
+
+        <!-- Scrolling seawall masonry joints, timber railing posts & coastal beach grass -->
+        <g id="midground-scroll"></g>
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 4. FOREGROUND COASTAL BIKE PATH (LOCKED TO WHEEL SPEED)         -->
+      <!-- =============================================================== -->
+      <g id="layer-road">
+        <!-- Curb & gravel shoulder -->
+        <rect x="0" y="604" width="1400" height="11" fill="url(#curbGrad)" />
+        <line x1="0" y1="615" x2="1400" y2="615" stroke="#303338" stroke-width="2" opacity="0.65" />
+
+        <!-- Asphalt surface -->
+        <rect x="0" y="615" width="1400" height="205" fill="url(#roadGrad)" />
+        <!-- Subtle sunlit warm sheen on upper road -->
+        <rect x="0" y="615" width="1400" height="86" fill="#ffd9a6" opacity="0.065" />
+        <!-- Fine static asphalt grain overlay -->
+        <rect x="0" y="615" width="1400" height="205" fill="#ffffff" filter="url(#asphaltGrain)" opacity="0.55" />
+
+        <!-- Scrolling road markings, cracks, pebbles & scattered leaves -->
+        <g id="road-scroll" clip-path="url(#roadClip)"></g>
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 5. REALISTIC DYNAMIC GROUND CONTACT & CAST SHADOW               -->
+      <!-- =============================================================== -->
+      <g id="layer-ground-shadow">
+        <!-- Broad diffuse ambient shadow -->
+        <ellipse id="shadow-main" cx="655" cy="672" rx="315" ry="20" fill="#171b22" opacity="0.46" filter="url(#softBlur)" />
+        <!-- Crisp dark tire contact patches -->
+        <ellipse id="shadow-rear-contact" cx="445" cy="669" rx="46" ry="6.5" fill="#0d1015" opacity="0.78" filter="url(#tinyBlur)" />
+        <ellipse id="shadow-front-contact" cx="885" cy="669" rx="46" ry="6.5" fill="#0d1015" opacity="0.78" filter="url(#tinyBlur)" />
+        <!-- Crank & pelican torso cast shadow skewed slightly back-left from sun -->
+        <ellipse id="shadow-body" cx="622" cy="677" rx="145" ry="13" fill="#12161d" opacity="0.34" filter="url(#softBlur)" />
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 6. MAIN RIG: BICYCLE + REALISTIC PELICAN (PROPER 3D LAYERING)   -->
+      <!-- =============================================================== -->
+      <g id="rider-bike-root">
+
+        <!-- 6A. FAR-SIDE HANDLEBAR & FAR WING (behind frame/body) -->
+        <g id="far-handlebar">
+          <!-- Far handlebar sweep -->
+          <path d="M 812 312 C 796 306, 776 308, 752 316" fill="none" stroke="url(#chromeGrad)" stroke-width="8.5" stroke-linecap="round" />
+          <!-- Far leather grip -->
+          <path d="M 768 311 L 744 318" fill="none" stroke="#3c1e0f" stroke-width="12" stroke-linecap="round" />
+          <path d="M 767 311 L 745 318" fill="none" stroke="#66371e" stroke-width="7.5" stroke-linecap="round" opacity="0.65" />
+          <!-- Far brake lever -->
+          <path d="M 767 315 C 774 326, 779 334, 785 339" fill="none" stroke="#a6b0b8" stroke-width="3.2" stroke-linecap="round" />
+        </g>
+
+        <!-- Far Pelican Wing (dynamically posed by JS IK) -->
+        <g id="pelican-far-wing"></g>
+
+        <!-- 6B. FAR-SIDE BICYCLE STAYS, CRANK & FAR PELICAN LEG -->
+        <g id="bike-far-stays">
+          <!-- Far chainstay & seatstay -->
+          <line x1="620" y1="578" x2="445" y2="556" stroke="#0d2220" stroke-width="8.5" stroke-linecap="round" />
+          <line x1="562" y1="394" x2="445" y2="556" stroke="#0e2624" stroke-width="7" stroke-linecap="round" />
+          <!-- Far fork blade -->
+          <path d="M 814 440 Q 842 502, 882 556" fill="none" stroke="#0f2826" stroke-width="9" stroke-linecap="round" />
+        </g>
+
+        <!-- Far Crank Arm & Far Pedal -->
+        <g id="far-crank-group">
+          <line id="far-crank-arm" x1="620" y1="578" x2="620" y2="530" stroke="#5b646d" stroke-width="9" stroke-linecap="round" />
+          <g id="far-pedal"></g>
+        </g>
+
+        <!-- Far Pelican Leg (IK animated, shaded slightly darker for depth) -->
+        <g id="pelican-far-leg"></g>
+
+        <!-- 6C. REAR & FRONT WHEELS (3-CROSS TANGENT SPOKES + TREADS) -->
+        <g id="rear-wheel-assembly">
+          <!-- Rear Fender (exact concentric r=120 around RW 445,556 from 172° to 338°) -->
+          <path d="M 326.2 572.7 A 120 120 0 0 1 556.3 511.0" fill="none" stroke="url(#fenderGrad)" stroke-width="11" stroke-linecap="round" />
+          <path d="M 327.2 571.0 A 119 119 0 0 1 555.0 509.8" fill="none" stroke="#7ec7bb" stroke-width="2" stroke-linecap="round" opacity="0.58" />
+          <!-- Vintage brown leather rear mudflap -->
+          <path d="M 322 570 L 331 572 L 325 594 Q 319 596 315 591 Z" fill="url(#leatherGrad)" stroke="#2c1509" stroke-width="1" />
+          <!-- Rear ruby tail reflector on fender -->
+          <ellipse cx="337" cy="510" rx="4.5" ry="7" transform="rotate(-22 337 510)" fill="#d63b2f" stroke="#c8d1d8" stroke-width="1.5" />
+          <ellipse cx="336" cy="508" rx="1.6" ry="3" transform="rotate(-22 336 508)" fill="#ff9e94" opacity="0.8" />
+          <!-- Rear fender stays (exact concentric attachment) -->
+          <line x1="445" y1="556" x2="325.4" y2="551.8" stroke="#bfc8d0" stroke-width="2" />
+          <line x1="445" y1="556" x2="346.7" y2="487.2" stroke="#bfc8d0" stroke-width="1.8" />
+          <!-- Rotating Rear Wheel -->
+          <g id="rear-wheel-spin" transform="translate(445, 556)"></g>
+          <!-- Rear Cassette (multi-speed cogs) -->
+          <g id="rear-cassette" transform="translate(445, 556)"></g>
+          <!-- Rear Derailleur Cage (jockey wheels aligned with S-chain path) -->
+          <g id="rear-derailleur" transform="translate(445, 556)">
+            <path d="M 1 6 L 7 26 L 0 45" fill="none" stroke="#535c65" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="7" cy="26" r="6.5" fill="#2e343a" stroke="#9aa5af" stroke-width="1.5" />
+            <circle cx="0" cy="45" r="6.5" fill="#2e343a" stroke="#9aa5af" stroke-width="1.5" />
+            <circle cx="7" cy="26" r="2" fill="#d8e0e6" />
+            <circle cx="0" cy="45" r="2" fill="#d8e0e6" />
+          </g>
+        </g>
+
+        <g id="front-wheel-assembly">
+          <!-- Front Fender (exact concentric r=120 around FW 885,556 from 194° to 304°) -->
+          <path d="M 768.6 527.0 A 120 120 0 0 1 952.1 456.5" fill="none" stroke="url(#fenderGrad)" stroke-width="11" stroke-linecap="round" />
+          <path d="M 769.8 525.8 A 119 119 0 0 1 950.8 455.5" fill="none" stroke="#7ec7bb" stroke-width="2" stroke-linecap="round" opacity="0.58" />
+          <!-- Front fender stays -->
+          <line x1="885" y1="556" x2="770.9" y2="518.9" stroke="#bfc8d0" stroke-width="2" />
+          <line x1="885" y1="556" x2="795.8" y2="475.7" stroke="#bfc8d0" stroke-width="1.8" />
+          <!-- Rotating Front Wheel -->
+          <g id="front-wheel-spin" transform="translate(885, 556)"></g>
+        </g>
+
+        <!-- 6D. ANIMATED ROLLER CHAIN & FRONT CHAINRING -->
+        <g id="drivetrain-chain"></g>
+        <g id="front-chainring" transform="translate(620, 578)"></g>
+
+        <!-- 6E. MAIN BICYCLE DIAMOND FRAME, LUGS, BRAKES, HEADLIGHT & SADDLE -->
+        <g id="bike-main-frame">
+          <!-- Brake cables (graceful arcs) -->
+          <path d="M 758 348 C 788 398, 822 414, 826 438" fill="none" stroke="#24292e" stroke-width="2.1" opacity="0.88" />
+          <path d="M 772 325 C 735 370, 665 374, 574 392 C 542 399, 520 420, 514 446" fill="none" stroke="#24292e" stroke-width="2.1" opacity="0.88" />
+
+          <!-- Near Chainstay -->
+          <path d="M 620 578 L 445 556" stroke="url(#frameTubeHoriz)" stroke-width="9.5" stroke-linecap="round" />
+          <!-- Near Seatstay -->
+          <path d="M 562 394 L 445 556" stroke="url(#frameTubeVert)" stroke-width="7.8" stroke-linecap="round" />
+          <!-- Rear Dropout Chrome Plate -->
+          <circle cx="445" cy="556" r="10" fill="url(#chromeGrad)" stroke="#3e464e" stroke-width="1.5" />
+          <circle cx="445" cy="556" r="4.5" fill="#464f57" />
+
+          <!-- Rear Rim Brake Caliper -->
+          <g transform="translate(509, 462) rotate(-25)">
+            <rect x="-8" y="-5" width="16" height="10" rx="3" fill="url(#chromeGrad)" stroke="#475058" stroke-width="1" />
+            <rect x="-11" y="4" width="6" height="9" rx="1.5" fill="#1e2226" />
+            <rect x="5" y="4" width="6" height="9" rx="1.5" fill="#1e2226" />
+          </g>
+
+          <!-- Seat Tube -->
+          <line x1="620" y1="578" x2="562" y2="394" stroke="url(#frameTubeVert)" stroke-width="14.5" stroke-linecap="round" />
+          <!-- Down Tube -->
+          <line x1="620" y1="578" x2="810" y2="428" stroke="url(#frameTubeHoriz)" stroke-width="15.5" stroke-linecap="round" />
+          <!-- Top Tube -->
+          <line x1="562" y1="394" x2="796" y2="384" stroke="url(#frameTubeHoriz)" stroke-width="13.5" stroke-linecap="round" />
+          <!-- Vintage Brass/Cream Frame Band Decals -->
+          <line x1="698" y1="516" x2="736" y2="486" stroke="#ecd9b0" stroke-width="15.8" opacity="0.88" />
+          <line x1="704" y1="511" x2="730" y2="491" stroke="#b9833a" stroke-width="15.8" opacity="0.65" />
+          <line x1="585" y1="466" x2="578" y2="444" stroke="#ecd9b0" stroke-width="14.8" opacity="0.82" />
+
+          <!-- Head Tube -->
+          <line x1="792" y1="372" x2="814" y2="440" stroke="url(#frameTubeVert)" stroke-width="17" stroke-linecap="butt" />
+
+          <!-- Chrome Vintage Frame Lugs & Headset -->
+          <!-- Seat cluster lug -->
+          <path d="M 554 388 L 574 386 L 578 402 L 558 406 Z" fill="url(#chromeGrad)" stroke="#3e484f" stroke-width="1" />
+          <!-- Upper head lug & headset -->
+          <ellipse cx="792" cy="372" rx="10.5" ry="4.2" transform="rotate(-17 792 372)" fill="url(#chromeGrad)" stroke="#4c555d" stroke-width="1" />
+          <!-- Lower head lug & fork crown -->
+          <ellipse cx="814" cy="440" rx="11" ry="4.5" transform="rotate(-17 814 440)" fill="url(#chromeGrad)" stroke="#4c555d" stroke-width="1" />
+
+          <!-- Near Front Fork Blade (classic curved touring rake) -->
+          <path d="M 814 440 Q 846 504, 885 556" fill="none" stroke="url(#frameTubeVert)" stroke-width="11" stroke-linecap="round" />
+          <!-- Chrome lower fork socks -->
+          <path d="M 857 518 Q 870 538, 885 556" fill="none" stroke="url(#chromeHoriz)" stroke-width="10.2" stroke-linecap="round" />
+          <!-- Front Dropout -->
+          <circle cx="885" cy="556" r="9.5" fill="url(#chromeGrad)" stroke="#3e464e" stroke-width="1.5" />
+          <circle cx="885" cy="556" r="4" fill="#464f57" />
+
+          <!-- Front Caliper Brake -->
+          <g transform="translate(833, 452) rotate(22)">
+            <rect x="-7" y="-5" width="14" height="9" rx="2.5" fill="url(#chromeGrad)" stroke="#485159" stroke-width="1" />
+            <rect x="-9" y="3" width="5" height="8" rx="1.2" fill="#1e2226" />
+          </g>
+
+          <!-- Vintage Chrome Bullet Headlight on Fork Crown -->
+          <g id="bike-headlight" transform="translate(852, 434) rotate(-6)">
+            <!-- Mounting bracket -->
+            <path d="M -32 8 L -14 10 L -10 2" fill="none" stroke="#b8c2ca" stroke-width="3" stroke-linecap="round" />
+            <!-- Bullet housing -->
+            <path d="M -18 0 C -18 -11, 2 -13, 14 -10 L 14 10 C 2 13, -18 11, -18 0 Z" fill="url(#chromeGrad)" stroke="#4f5961" stroke-width="1.2" />
+            <!-- Lens bezel -->
+            <ellipse cx="14" cy="0" rx="4.5" ry="10.2" fill="#fff7db" stroke="#7d8790" stroke-width="1.6" />
+            <!-- Subtle warm headlight beam -->
+            <polygon id="headlight-beam" points="18,-8 175,-46 175,46 18,8" fill="#ffeab0" opacity="0.08" />
+          </g>
+
+          <!-- Water Bottle Cage aligned cleanly parallel along upper side of Down Tube -->
+          <g transform="translate(701, 486) rotate(51.7)">
+            <!-- Aluminum water bottle -->
+            <rect x="-12" y="-22" width="24" height="44" rx="7" fill="#e6dfd2" stroke="#857d70" stroke-width="1.2" />
+            <rect x="-12" y="-7" width="24" height="15" fill="#2c665f" opacity="0.86" />
+            <line x1="-11" y1="-12" x2="-11" y2="16" stroke="#ffffff" stroke-width="2.2" opacity="0.55" />
+            <rect x="-7" y="-27" width="14" height="6" rx="2" fill="#3a4046" />
+            <rect x="-3.5" y="-31" width="7" height="4.5" rx="1.2" fill="#c79546" />
+            <!-- Stainless wire bottle cage -->
+            <path d="M -13.5 -10 L -13.5 23 L 13.5 23 L 13.5 -10" fill="none" stroke="#cfd8df" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M -13.5 4 Q 0 9 13.5 4" fill="none" stroke="#cfd8df" stroke-width="2" />
+          </g>
+
+          <!-- Bottom Bracket Shell -->
+          <circle cx="620" cy="578" r="14" fill="url(#chromeGrad)" stroke="#39424a" stroke-width="1.5" />
+
+          <!-- Seatpost & Brooks Stitched Leather Saddle -->
+          <line x1="562" y1="394" x2="548" y2="350" stroke="url(#chromeHoriz)" stroke-width="9.5" stroke-linecap="round" />
+          <g id="bike-saddle">
+            <!-- Saddle rails & vintage rear coil springs -->
+            <path d="M 510 356 L 575 352" fill="none" stroke="#9ea8b0" stroke-width="3.2" stroke-linecap="round" />
+            <path d="M 508 355 C 503 349, 514 347, 509 342 C 504 338, 515 336, 510 332" fill="none" stroke="#b6c0c8" stroke-width="2.5" />
+            <path d="M 521 355 C 516 349, 527 347, 522 342 C 517 338, 528 336, 523 332" fill="none" stroke="#8e98a0" stroke-width="2.4" />
+            <rect x="540" y="346" width="15" height="9" rx="2" fill="#5e6770" />
+            <!-- Sculpted leather saddle shell -->
+            <path d="M 488 334 C 492 325, 516 328, 544 332 C 568 335, 590 330, 598 335 C 602 338, 596 346, 580 347 C 556 348, 536 346, 518 351 C 498 356, 485 344, 488 334 Z" fill="url(#leatherGrad)" stroke="#291207" stroke-width="1.3" />
+            <path d="M 498 333 C 522 332, 558 337, 588 335" fill="none" stroke="url(#leatherHighlight)" stroke-width="4" stroke-linecap="round" />
+            <!-- Copper rivets -->
+            <circle cx="498" cy="340" r="2.2" fill="#d68b57" />
+            <circle cx="508" cy="343" r="2.2" fill="#d68b57" />
+            <circle cx="519" cy="344" r="2.1" fill="#d68b57" />
+          </g>
+
+          <!-- Quill Stem, Brass Bell & Near Handlebar -->
+          <g id="bike-cockpit">
+            <!-- Stem shaft & gooseneck -->
+            <path d="M 792 372 L 775 318 C 773 312, 779 307, 787 308 L 812 312" fill="none" stroke="url(#chromeGrad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="812" cy="312" r="7.5" fill="url(#chromeGrad)" stroke="#4c555d" stroke-width="1.3" />
+
+            <!-- Clickable Shiny Brass Bicycle Bell -->
+            <g id="brass-bell" transform="translate(792, 304)" style="cursor: pointer;">
+              <rect x="-4" y="0" width="8" height="7" fill="#59626a" />
+              <path d="M -11 2 C -11 -10, 11 -10, 11 2 Z" fill="url(#brassGrad)" stroke="#6c4814" stroke-width="1.1" />
+              <ellipse cx="-3" cy="-4.5" rx="3.2" ry="1.6" transform="rotate(-24 -3 -4.5)" fill="#fff8d6" opacity="0.82" />
+              <line x1="-11" y1="2" x2="11" y2="2" stroke="#5d3c10" stroke-width="1.5" />
+              <!-- Bell striker thumb lever -->
+              <path d="M -11 1 L -17 -2" stroke="#808b94" stroke-width="2.4" stroke-linecap="round" />
+              <!-- Sound wave rings (animated on ring) -->
+              <g id="bell-waves" opacity="0">
+                <path d="M 15 -8 A 14 14 0 0 1 15 6" fill="none" stroke="#ffe599" stroke-width="2.2" stroke-linecap="round" />
+                <path d="M 21 -13 A 22 22 0 0 1 21 11" fill="none" stroke="#ffd269" stroke-width="1.8" stroke-linecap="round" />
+                <path d="M -18 -9 A 14 14 0 0 0 -18 5" fill="none" stroke="#ffe599" stroke-width="2" stroke-linecap="round" />
+              </g>
+            </g>
+
+            <!-- Near Handlebar Swept Curve -->
+            <path d="M 812 312 C 794 316, 770 324, 734 336" fill="none" stroke="url(#chromeGrad)" stroke-width="9.5" stroke-linecap="round" />
+            <!-- Near Brake Lever -->
+            <path d="M 762 332 C 768 345, 772 354, 779 361" fill="none" stroke="url(#chromeGrad)" stroke-width="3.8" stroke-linecap="round" />
+            <!-- Near Stitched Brown Leather Grip -->
+            <path d="M 756 329 L 728 338" fill="none" stroke="#3c1e0f" stroke-width="13.5" stroke-linecap="round" />
+            <path d="M 755 328.5 L 729 337.5" fill="none" stroke="url(#leatherGrad)" stroke-width="10.5" stroke-linecap="round" />
+            <path d="M 752 327 L 731 334" fill="none" stroke="#be7c50" stroke-width="2.2" stroke-linecap="round" opacity="0.5" />
+            <!-- Chrome bar-end plug -->
+            <circle cx="727" cy="338" r="5" fill="url(#chromeGrad)" stroke="#3d444b" stroke-width="1" />
+          </g>
+        </g>
+
+        <!-- 6F. REALISTIC PELICAN BODY, TAIL, NECK, HEAD, BILL & POUCH -->
+        <g id="pelican-upper-body">
+          <!-- Tail Feathers (Rectrices) -->
+          <g id="pelican-tail"></g>
+
+          <!-- Main Plump Boat-Shaped Torso -->
+          <g id="pelican-torso">
+            <!-- Base torso silhouette -->
+            <path d="M 484 328
+                     C 494 282, 548 242, 616 238
+                     C 656 236, 686 266, 684 306
+                     C 682 346, 646 382, 594 388
+                     C 548 394, 496 368, 484 328 Z"
+                  fill="url(#pelicanBodyGrad)" stroke="#a3adb9" stroke-width="1" />
+            <!-- Warm peach-gold breeding breast blush -->
+            <ellipse cx="646" cy="296" rx="44" ry="52" transform="rotate(14 646 296)" fill="url(#breastBlush)" />
+            <!-- Lower belly cool ambient shadow -->
+            <path d="M 494 342 C 522 378, 578 392, 628 374 C 658 362, 676 336, 681 312 C 668 346, 636 372, 588 377 C 544 382, 510 364, 494 342 Z"
+                  fill="#78899f" opacity="0.34" />
+            <!-- Procedural layered torso & breast feathers -->
+            <g id="pelican-body-feathers"></g>
+            <!-- Soft realistic shadow cast onto flank by the near folded wing -->
+            <path d="M 554 316 C 584 342, 622 358, 654 352 C 642 368, 610 376, 574 366 C 556 358, 548 338, 554 316 Z"
+                  fill="#5a6b82" opacity="0.22" filter="url(#tinyBlur)" />
+            <!-- Crisp sunlit dorsal rim highlight -->
+            <path d="M 518 286 C 550 254, 596 240, 640 245" fill="none" stroke="#fffef8" stroke-width="3.5" stroke-linecap="round" opacity="0.72" />
+          </g>
+
+          <!-- Graceful S-Curved Neck, Head, Realistic Eye, Bill & Subsurface-Lit Gular Pouch -->
+          <g id="pelican-neck-head">
+            <!-- Neck group (dynamically updated every frame to seamlessly track stabilized head!) -->
+            <g id="pelican-neck-shape">
+              <path id="neck-contour"
+                    d="M 604 248
+                       C 596 218, 598 184, 622 154
+                       C 634 138, 654 134, 672 138
+                       C 684 142, 686 164, 674 176
+                       C 656 194, 652 216, 668 256
+                       C 650 264, 622 262, 604 248 Z"
+                    fill="url(#neckGrad)" />
+              <path id="neck-highlight" d="M 672 178 C 655 196, 653 218, 666 254" fill="none" stroke="#fff9eb" stroke-width="3" stroke-linecap="round" opacity="0.65" />
+              <path id="neck-shadow" d="M 606 244 C 598 214, 601 184, 622 157" fill="none" stroke="#9aa7b7" stroke-width="3.5" stroke-linecap="round" opacity="0.42" />
+              <!-- Delicate layered neck feather strokes -->
+              <g id="neck-feathers" opacity="0.68"></g>
+            </g>
+
+            <!-- Head & Bill Assembly (pivots smoothly around cranium for stabilized gaze) -->
+            <g id="pelican-head-unit" transform="translate(658, 152)">
+              <!-- Wind-fluttering wispy nape crest plumes -->
+              <g id="pelican-crest"></g>
+
+              <!-- Cranium & Forehead -->
+              <path d="M -38 8
+                       C -44 -14, -28 -30, -4 -28
+                       C 14 -27, 26 -17, 36 -8
+                       C 38 6, 28 22, 10 26
+                       C -12 30, -32 22, -38 8 Z"
+                    fill="url(#headGrad)" />
+              <!-- Subtle warm forehead crown glow & delicate crown/cheek feather lines -->
+              <ellipse cx="4" cy="-16" rx="18" ry="8" transform="rotate(12 4 -16)" fill="#fffef6" opacity="0.68" />
+              <path d="M -26 -8 Q -12 -14 0 -12 M -28 2 Q -14 -3 -2 0 M -24 12 Q -10 10 2 13" fill="none" stroke="#b9c2ce" stroke-width="1" stroke-linecap="round" opacity="0.6" />
+
+              <!-- Expandable Gular Throat Pouch (secondary physics sway!) -->
+              <g id="pelican-pouch-group">
+                <!-- Pouch shadow fold -->
+                <path id="pouch-main"
+                      d="M 14 14
+                         C 22 46, 46 76, 86 80
+                         C 124 83, 154 64, 188 38
+                         L 194 32
+                         L 22 9 Z"
+                      fill="url(#pouchGrad)" stroke="#9a451a" stroke-width="1.1" />
+                <!-- Subsurface sunlit lower rim glow -->
+                <path id="pouch-glow"
+                      d="M 26 42 C 48 72, 86 79, 122 69 C 148 61, 168 48, 184 37 C 154 54, 118 66, 84 65 C 54 64, 36 52, 26 42 Z"
+                      fill="url(#pouchRimLight)" />
+                <!-- Delicate realistic skin creases & subtle vascular shading -->
+                <path d="M 38 22 C 48 44, 72 62, 102 64" fill="none" stroke="#b9521f" stroke-width="1.3" opacity="0.46" />
+                <path d="M 64 23 C 76 42, 102 55, 134 52" fill="none" stroke="#b9521f" stroke-width="1.1" opacity="0.38" />
+                <path d="M 94 25 C 108 38, 132 45, 158 41" fill="none" stroke="#c86128" stroke-width="1" opacity="0.35" />
+                <path d="M 48 36 C 68 50, 88 55, 112 52" fill="none" stroke="#ffd885" stroke-width="1.2" opacity="0.36" />
+                <!-- Soft downy throat feathers gently overlapping the rear base of the gular pouch -->
+                <path d="M 8 10 C 16 14, 21 22, 17 29 C 12 24, 9 18, 6 14 Z" fill="#f3eadc" opacity="0.92" />
+                <path d="M 11 16 C 20 20, 26 28, 22 34 C 16 29, 13 23, 10 19 Z" fill="#eae1d3" opacity="0.82" />
+                <!-- Lower mandible rim supporting the pouch -->
+                <path d="M 20 11 C 74 19, 136 27, 195 33" fill="none" stroke="#c86e33" stroke-width="4.2" stroke-linecap="round" />
+                <path d="M 24 10 C 76 18, 136 26, 193 32" fill="none" stroke="#f6ba6e" stroke-width="1.5" stroke-linecap="round" opacity="0.72" />
+              </g>
+
+              <!-- Iconic Long Upper Bill (Maxilla) with Keratin Ridge & Hooked Nail -->
+              <g id="pelican-upper-bill">
+                <!-- Main upper mandible silhouette -->
+                <path d="M 24 -12
+                         C 78 -5, 146 8, 198 24
+                         C 205 26, 207 32, 203 39
+                         C 200 44, 194 42, 193 37
+                         C 192 34, 188 33, 182 32
+                         C 132 25, 72 17, 18 9
+                         C 16 1, 18 -7, 24 -12 Z"
+                      fill="url(#upperBillGrad)" stroke="#9e4d24" stroke-width="1" />
+                <!-- Dorsal culmen keratin ridge (runs centrally along top of bill) -->
+                <path d="M 26 -9 C 80 -2, 144 10, 196 25 C 142 15, 78 5, 22 -2 Z"
+                      fill="url(#billCulmenRidge)" opacity="0.88" />
+                <!-- Crisp specular sunlit highlight along upper edge -->
+                <path d="M 30 -10 C 82 -3, 142 9, 194 23" fill="none" stroke="#fff7e2" stroke-width="2" stroke-linecap="round" opacity="0.78" />
+                <!-- Subtle longitudinal groove & natural keratin mottling -->
+                <path d="M 28 2 C 80 10, 138 19, 190 29" fill="none" stroke="#96471f" stroke-width="1.2" opacity="0.45" />
+                <!-- Sharp coral-red hooked tip nail (unguis) -->
+                <path d="M 190 22 C 201 24, 207 30, 203 39 C 200 43, 195 42, 194 37 C 194 33, 191 30, 187 28 Z"
+                      fill="#c94624" stroke="#7d2510" stroke-width="0.8" />
+                <path d="M 194 24 C 199 26, 202 30, 201 35" fill="none" stroke="#ffba8f" stroke-width="1.3" stroke-linecap="round" opacity="0.72" />
+                <!-- Elongated slit nostril near base -->
+                <path d="M 40 -3 L 54 0" stroke="#7c3a19" stroke-width="1.6" stroke-linecap="round" opacity="0.65" />
+                <!-- Tomium (mouth line) subtle dark seam -->
+                <path d="M 18 9 C 72 17, 134 26, 192 33" fill="none" stroke="#692d11" stroke-width="1.4" opacity="0.72" />
+              </g>
+
+              <!-- Bare Facial Lore Patch & Expressive Realistic Eye -->
+              <g id="pelican-eye-area">
+                <!-- Bare pale-apricot facial skin surrounding eye & base of bill -->
+                <path d="M -2 -3 C 4 -12, 18 -13, 25 -8 C 27 0, 23 11, 14 13 C 4 14, -4 6, -2 -3 Z"
+                      fill="#f5cba0" opacity="0.86" />
+                <!-- Subtle feathered cheek edge -->
+                <path d="M -3 0 C -1 -10, 12 -14, 22 -10" fill="none" stroke="#e4c29e" stroke-width="2" opacity="0.7" />
+                <!-- Eye socket shading -->
+                <circle cx="11" cy="-1" r="8.2" fill="#d9a173" opacity="0.75" />
+                <!-- Sclera / golden-pale iris ring -->
+                <circle cx="11" cy="-1" r="6.4" fill="#d8b982" stroke="#5b3d24" stroke-width="1" />
+                <circle cx="11.3" cy="-1" r="5" fill="#3a281c" />
+                <!-- Deep pupil -->
+                <circle cx="11.8" cy="-1" r="3.4" fill="#100d0b" />
+                <!-- Crisp corneal catchlights (sun + sky bounce) -->
+                <circle cx="13.4" cy="-2.8" r="1.6" fill="#ffffff" />
+                <circle cx="9.6" cy="0.8" r="0.85" fill="#cfe4f7" opacity="0.75" />
+                <!-- Animated upper & lower eyelids for natural blinking -->
+                <path id="eyelid-upper" d="M 3.5 -2 C 7 -9.5, 15.5 -9.5, 18.8 -2 C 15 -5.8, 7.5 -5.8, 3.5 -2 Z" fill="#ebd2b5" stroke="#8f6b4b" stroke-width="0.6" />
+                <path id="eyelid-lower" d="M 4 0.5 C 8 6.8, 15 6.8, 18.4 0.5 C 14.8 4.2, 7.8 4.2, 4 0.5 Z" fill="#e4c4a2" opacity="0.7" />
+                <!-- Full blink shutter (scaled Y from 0 to 1 during blink) -->
+                <ellipse id="eye-blink-lid" cx="11" cy="-1" rx="7.6" ry="0" fill="#ebd2b5" stroke="#856244" stroke-width="0.8" />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        <!-- 6G. NEAR CRANK ARM, NEAR PEDAL & NEAR PELICAN LEG (FRONT LAYER) -->
+        <g id="near-crank-group">
+          <line id="near-crank-arm" x1="620" y1="578" x2="620" y2="626" stroke="url(#chromeGrad)" stroke-width="10.5" stroke-linecap="round" />
+          <line id="near-crank-flute" x1="620" y1="578" x2="620" y2="626" stroke="#6c7680" stroke-width="3.2" stroke-linecap="round" opacity="0.6" />
+          <!-- Crank center dust cap -->
+          <circle cx="620" cy="578" r="7" fill="url(#chromeGrad)" stroke="#48525b" stroke-width="1.2" />
+          <circle cx="620" cy="578" r="2.6" fill="#3b434a" />
+          <g id="near-pedal"></g>
+        </g>
+
+        <!-- Near Pelican Leg & Totipalmate Webbed Foot (IK animated) -->
+        <g id="pelican-near-leg"></g>
+
+        <!-- 6H. NEAR PELICAN WING (RICH MULTI-LAYER FEATHERING GRIPPING HANDLEBAR) -->
+        <g id="pelican-near-wing" filter="url(#featherShadow)"></g>
+      </g>
+
+      <!-- =============================================================== -->
+      <!-- 7. FOREGROUND ATMOSPHERE: SUNLIT BREEZE MOTES & CINEMATIC GRADE -->
+      <!-- =============================================================== -->
+      <g id="layer-atmosphere" pointer-events="none">
+        <g id="breeze-motes"></g>
+        <!-- Warm coastal sun flare vignette -->
+        <rect id="atmos-grade" x="0" y="0" width="1400" height="820" fill="url(#sunGlow)" opacity="0.22" />
+      </g>
+    </svg>
+
+    <!-- Sleek Interactive Controls -->
+    <div class="hud" role="toolbar" aria-label="动画控制栏">
+      <button id="btn-toggle" class="hud-btn" title="暂停/继续 (空格)">
+        <span id="toggle-icon">⏸</span>
+        <span id="toggle-label">暂停</span>
+      </button>
+
+      <div class="hud-divider"></div>
+
+      <label class="speed-wrap" title="调节踏频速度">
+        <span>速度</span>
+        <input id="speed-slider" type="range" min="0.2" max="2.2" step="0.05" value="1.0" />
+        <span id="speed-val" class="speed-val">1.0x</span>
+      </label>
+
+      <div class="hud-divider"></div>
+
+      <div class="theme-group" role="group" aria-label="光照氛围">
+        <button class="hud-btn active" data-theme="golden">金色海岸</button>
+        <button class="hud-btn" data-theme="morning">晴朗正午</button>
+        <button class="hud-btn" data-theme="sunset">落日余晖</button>
+      </div>
+
+      <div class="hud-divider"></div>
+
+      <button id="btn-bell" class="hud-btn" title="按响铜铃 (B)">🔔 响铃</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const SVG_NS = "http://www.w3.org/2000/svg";
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(SVG_NS, tag);
+        for (const [k, v] of Object.entries(attrs)) {
+          node.setAttribute(k, String(v));
+        }
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      // Deterministic PRNG for rich, reproducible organic detail
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return () => {
+          a |= 0; a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      // =====================================================================
+      // BICYCLE & ANATOMY CONSTANTS (EXACT COORDINATE SYSTEM)
+      // =====================================================================
+      const RW = { x: 445, y: 556 };
+      const FW = { x: 885, y: 556 };
+      const BB = { x: 620, y: 578 };
+      const R_WHEEL = 112;
+      const R_CRANK = 48;
+      const R_CHAINRING = 35;
+      const R_COG = 18;
+      const GEAR_RATIO = R_CHAINRING / R_COG; // ~1.9444 wheel turns per crank turn
+
+      const BASE_HIP_NEAR = { x: 576, y: 382 };
+      const BASE_HIP_FAR  = { x: 590, y: 376 };
+      const LEG_L1 = 134; // Feathered upper leg (tibiotarsus)
+      const LEG_L2 = 134; // Scaly lower leg (tarsometatarsus)
+
+      const BASE_SHOULDER_NEAR = { x: 600, y: 266 };
+      const BASE_SHOULDER_FAR  = { x: 632, y: 256 };
+      const GRIP_NEAR = { x: 734, y: 335 };
+      const GRIP_FAR  = { x: 752, y: 316 };
+
+      // =====================================================================
+      // 1. BUILD HIGH-PRECISION BICYCLE WHEELS (3-CROSS TANGENT SPOKES)
+      // =====================================================================
+      function buildRealisticWheel(containerId, seedOffset) {
+        const g = document.getElementById(containerId);
+        const R_TIRE_OUT = 112;
+        const R_TREAD_BASE = 109.5;
+        const R_SIDEWALL = 103;
+        const R_RIM_OUT = 98.5;
+        const R_RIM_IN = 91.5;
+        const R_FLANGE = 14.5;
+        const SPOKE_COUNT = 28;
+
+        // Subtle rubber tire tread lugs around perimeter
+        const treadCount = 72;
+        let treadPath = "";
+        for (let i = 0; i < treadCount; i++) {
+          const a0 = (i / treadCount) * Math.PI * 2;
+          const a1 = ((i + 0.52) / treadCount) * Math.PI * 2;
+          const x0 = Math.cos(a0) * R_TIRE_OUT;
+          const y0 = Math.sin(a0) * R_TIRE_OUT;
+          const x1 = Math.cos(a1) * R_TIRE_OUT;
+          const y1 = Math.sin(a1) * R_TIRE_OUT;
+          treadPath += `M ${x0.toFixed(2)} ${y0.toFixed(2)} L ${x1.toFixed(2)} ${y1.toFixed(2)} `;
+        }
+        el("path", { d: treadPath, stroke: "#181a1e", "stroke-width": 3.4, "stroke-linecap": "butt" }, g);
+
+        // Main rubber tire casing
+        el("circle", { r: 106.5, fill: "none", stroke: "#26292e", "stroke-width": 10.2 }, g);
+        // Classic gumwall / tan sidewall band
+        el("circle", { r: 100.8, fill: "none", stroke: "#b99266", "stroke-width": 3.8 }, g);
+        el("circle", { r: 102.5, fill: "none", stroke: "#7a5b3b", "stroke-width": 0.9, opacity: 0.7 }, g);
+
+        // 28 Authentic 3-Cross Tangent-Laced Spokes
+        const spokeGroup = el("g", { opacity: 0.92 }, g);
+        const tangentAngle = 1.08; // radians offset for realistic 3-cross tangent lacing
+        for (let i = 0; i < SPOKE_COUNT; i++) {
+          const rimA = (i / SPOKE_COUNT) * Math.PI * 2 + seedOffset;
+          const dir = i % 2 === 0 ? 1 : -1;
+          const hubA = rimA + dir * tangentAngle;
+
+          const hx = Math.cos(hubA) * R_FLANGE;
+          const hy = Math.sin(hubA) * R_FLANGE;
+          const rx = Math.cos(rimA) * R_RIM_IN;
+          const ry = Math.sin(rimA) * R_RIM_IN;
+
+          el("line", {
+            x1: hx.toFixed(2), y1: hy.toFixed(2),
+            x2: rx.toFixed(2), y2: ry.toFixed(2),
+            stroke: i % 2 === 0 ? "#e2e9ef" : "#aeb8c2",
+            "stroke-width": i % 2 === 0 ? 1.25 : 1.05
+          }, spokeGroup);
+
+          // Brass spoke nipple at rim
+          const nx = Math.cos(rimA) * (R_RIM_IN - 2.2);
+          const ny = Math.sin(rimA) * (R_RIM_IN - 2.2);
+          el("line", {
+            x1: rx.toFixed(2), y1: ry.toFixed(2),
+            x2: nx.toFixed(2), y2: ny.toFixed(2),
+            stroke: "#d5a34d", "stroke-width": 2.3, "stroke-linecap": "round"
+          }, spokeGroup);
+        }
+
+        // Polished alloy rim
+        el("circle", { r: 95.2, fill: "none", stroke: "url(#rimMetallic)", "stroke-width": 7.2 }, g);
+        el("circle", { r: 98.4, fill: "none", stroke: "#5c646c", "stroke-width": 1.1 }, g);
+        el("circle", { r: 91.8, fill: "none", stroke: "#69737c", "stroke-width": 1.1 }, g);
+
+        // Brass Presta valve stem
+        el("line", { x1: 0, y1: -91.5, x2: 0, y2: -79, stroke: "#d4a348", "stroke-width": 3, "stroke-linecap": "round" }, g);
+        el("line", { x1: 0, y1: -79, x2: 0, y2: -74, stroke: "#282c31", "stroke-width": 2.6, "stroke-linecap": "round" }, g);
+
+        // Amber spoke reflector clip (adds super readable wheel rotation!)
+        el("rect", {
+          x: -3.5, y: 61, width: 7, height: 18, rx: 2.2,
+          fill: "#f09934", stroke: "#8a4b12", "stroke-width": 1
+        }, g);
+        el("rect", { x: -1.5, y: 63, width: 3, height: 14, rx: 1, fill: "#ffd78a", opacity: 0.72 }, g);
+
+        // Hub flange & spoke holes
+        el("circle", { r: 17.5, fill: "url(#chromeGrad)", stroke: "#5a636c", "stroke-width": 1.2 }, g);
+        el("circle", { r: 12, fill: "#828c96", stroke: "#485058", "stroke-width": 1 }, g);
+      }
+
+      buildRealisticWheel("rear-wheel-spin", 0.08);
+      buildRealisticWheel("front-wheel-spin", 0.35);
+
+      // =====================================================================
+      // 2. BUILD MACHINED CHAINRING, REAR CASSETTE & ANIMATED ROLLER CHAIN
+      // =====================================================================
+      function makeGearPath(teeth, rOuter, rRoot) {
+        let d = "";
+        for (let i = 0; i < teeth; i++) {
+          const a0 = (i / teeth) * Math.PI * 2;
+          const a1 = ((i + 0.25) / teeth) * Math.PI * 2;
+          const a2 = ((i + 0.55) / teeth) * Math.PI * 2;
+          const a3 = ((i + 0.80) / teeth) * Math.PI * 2;
+          const p0 = [Math.cos(a0) * rRoot, Math.sin(a0) * rRoot];
+          const p1 = [Math.cos(a1) * rOuter, Math.sin(a1) * rOuter];
+          const p2 = [Math.cos(a2) * rOuter, Math.sin(a2) * rOuter];
+          const p3 = [Math.cos(a3) * rRoot, Math.sin(a3) * rRoot];
+          d += (i === 0 ? "M " : "L ") + `${p0[0].toFixed(2)} ${p0[1].toFixed(2)} `;
+          d += `L ${p1[0].toFixed(2)} ${p1[1].toFixed(2)} `;
+          d += `L ${p2[0].toFixed(2)} ${p2[1].toFixed(2)} `;
+          d += `L ${p3[0].toFixed(2)} ${p3[1].toFixed(2)} `;
+        }
+        return d + "Z";
+      }
+
+      // Front 5-arm machined aluminum chainring
+      const chainringEl = document.getElementById("front-chainring");
+      const chainringSpin = el("g", { id: "chainring-spin" }, chainringEl);
+      el("path", {
+        d: makeGearPath(42, R_CHAINRING + 2.4, R_CHAINRING - 1.6),
+        fill: "url(#chromeGrad)", stroke: "#4f5860", "stroke-width": 1
+      }, chainringSpin);
+      el("circle", { r: 28, fill: "#1f2429", opacity: 0.14 }, chainringSpin);
+      // 5 machined cutouts (spider arms)
+      for (let i = 0; i < 5; i++) {
+        const a0 = (i / 5) * Math.PI * 2 + 0.18;
+        const a1 = ((i + 1) / 5) * Math.PI * 2 - 0.18;
+        const rIn = 11.5, rOut = 26.5;
+        const pathD = `M ${(Math.cos(a0) * rIn).toFixed(2)} ${(Math.sin(a0) * rIn).toFixed(2)}
+                       L ${(Math.cos(a0) * rOut).toFixed(2)} ${(Math.sin(a0) * rOut).toFixed(2)}
+                       A ${rOut} ${rOut} 0 0 1 ${(Math.cos(a1) * rOut).toFixed(2)} ${(Math.sin(a1) * rOut).toFixed(2)}
+                       L ${(Math.cos(a1) * rIn).toFixed(2)} ${(Math.sin(a1) * rIn).toFixed(2)}
+                       A ${rIn} ${rIn} 0 0 0 ${(Math.cos(a0) * rIn).toFixed(2)} ${(Math.sin(a0) * rIn).toFixed(2)} Z`;
+        el("path", { d: pathD, fill: "#3e464e", opacity: 0.72 }, chainringSpin);
+        // Chainring bolt
+        const ab = (i / 5) * Math.PI * 2;
+        el("circle", {
+          cx: (Math.cos(ab) * 28.5).toFixed(2),
+          cy: (Math.sin(ab) * 28.5).toFixed(2),
+          r: 2.3, fill: "#e6edf2", stroke: "#4c545c", "stroke-width": 0.8
+        }, chainringSpin);
+      }
+
+      // Rear multi-speed cassette
+      const cassetteEl = document.getElementById("rear-cassette");
+      const cassetteSpin = el("g", { id: "cassette-spin" }, cassetteEl);
+      el("path", { d: makeGearPath(24, 23, 20), fill: "#69737c", stroke: "#3b4248", "stroke-width": 0.8 }, cassetteSpin);
+      el("path", { d: makeGearPath(20, R_COG + 1.8, R_COG - 1.4), fill: "#8e98a2", stroke: "#464f57", "stroke-width": 0.8 }, cassetteSpin);
+      el("path", { d: makeGearPath(15, 13.5, 11.2), fill: "#b8c2ca", stroke: "#4d565e", "stroke-width": 0.8 }, cassetteSpin);
+
+      // Exact Mechanically Authentic Roller-Chain Loop (with Rear Derailleur S-Routing!)
+      function buildChainLoop() {
+        const dx = BB.x - RW.x;
+        const dy = BB.y - RW.y;
+        const dist = Math.hypot(dx, dy);
+        const baseAngle = Math.atan2(dy, dx);
+        const alpha = Math.acos((R_CHAINRING - R_COG) / dist);
+
+        const aTop = baseAngle - alpha;
+        const aBotFront = Math.PI * 0.52;
+
+        // Derailleur pulley centers (matching SVG #rear-derailleur)
+        const P_UP = { x: RW.x + 7, y: RW.y + 26, r: 7.2 };
+        const P_LO = { x: RW.x + 0, y: RW.y + 45, r: 7.2 };
+
+        const points = [];
+        function addArc(cx, cy, r, aStart, aEnd, steps, skipFirst) {
+          for (let i = skipFirst ? 1 : 0; i <= steps; i++) {
+            const a = aStart + (i / steps) * (aEnd - aStart);
+            points.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+          }
+        }
+        function addLine(p0, p1, steps) {
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            points.push({ x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t });
+          }
+        }
+
+        // 1. Front half of chainring (clockwise from top tangent to bottom)
+        addArc(BB.x, BB.y, R_CHAINRING, aTop, aBotFront, 22, false);
+
+        // 2. Lower straight run from chainring bottom to rear derailleur lower tension pulley
+        const bStart = points[points.length - 1];
+        const pLoBot = { x: P_LO.x + Math.cos(Math.PI * 0.52) * P_LO.r, y: P_LO.y + Math.sin(Math.PI * 0.52) * P_LO.r };
+        addLine(bStart, pLoBot, 24);
+
+        // 3. Wrap clockwise around lower pulley back-left side
+        addArc(P_LO.x, P_LO.y, P_LO.r, Math.PI * 0.52, Math.PI * 1.25, 10, true);
+
+        // 4. Short diagonal up to front-right of upper guide pulley
+        const pUpFront = { x: P_UP.x + Math.cos(Math.PI * 0.12) * P_UP.r, y: P_UP.y + Math.sin(Math.PI * 0.12) * P_UP.r };
+        addLine(points[points.length - 1], pUpFront, 6);
+
+        // 5. Wrap counter-clockwise (S-curve!) around upper guide pulley up to rear cog bottom
+        addArc(P_UP.x, P_UP.y, P_UP.r, Math.PI * 0.12, -Math.PI * 0.62, 10, true);
+
+        // 6. Wrap clockwise around rear cog back half up to top tangent
+        addArc(RW.x, RW.y, R_COG, Math.PI * 0.42, aTop + Math.PI * 2, 20, true);
+
+        // 7. Upper tensioned run straight back to front chainring top tangent
+        const tEnd = { x: BB.x + Math.cos(aTop) * R_CHAINRING, y: BB.y + Math.sin(aTop) * R_CHAINRING };
+        addLine(points[points.length - 1], tEnd, 24);
+        points.pop(); // avoid duplicate closing vertex
+
+        // Compute cumulative arc length
+        const cumLen = [0];
+        for (let i = 1; i < points.length; i++) {
+          cumLen.push(cumLen[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
+        }
+        const totalLen = cumLen[cumLen.length - 1] + Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y);
+
+        function sampleAt(s) {
+          let u = ((s % totalLen) + totalLen) % totalLen;
+          for (let i = 0; i < points.length; i++) {
+            const next = (i + 1) % points.length;
+            const segEnd = next === 0 ? totalLen : cumLen[next];
+            if (u <= segEnd || i === points.length - 1) {
+              const segStart = cumLen[i];
+              const segLen = Math.max(1e-5, segEnd - segStart);
+              const f = (u - segStart) / segLen;
+              const p0 = points[i], p1 = points[next];
+              return {
+                x: p0.x + (p1.x - p0.x) * f,
+                y: p0.y + (p1.y - p0.y) * f,
+                ang: Math.atan2(p1.y - p0.y, p1.x - p0.x) * (180 / Math.PI)
+              };
+            }
+          }
+          return { x: points[0].x, y: points[0].y, ang: 0 };
+        }
+
+        return { totalLen, sampleAt, points };
+      }
+
+      const chainLoop = buildChainLoop();
+      const chainContainer = document.getElementById("drivetrain-chain");
+      // Base continuous dark chain core path
+      const chainPolyD = chainLoop.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
+      el("path", { d: chainPolyD, fill: "none", stroke: "#22272c", "stroke-width": 4.8 }, chainContainer);
+
+      // Individual animated chain links
+      const LINK_COUNT = 54;
+      const chainLinks = [];
+      for (let i = 0; i < LINK_COUNT; i++) {
+        const gLink = el("g", {}, chainContainer);
+        const isOuter = i % 2 === 0;
+        el("rect", {
+          x: -4.2, y: isOuter ? -2.7 : -2.1,
+          width: 8.4, height: isOuter ? 5.4 : 4.2,
+          rx: 2.1,
+          fill: isOuter ? "#7d8790" : "#4b535b",
+          stroke: "#1f2429", "stroke-width": 0.7
+        }, gLink);
+        el("circle", { cx: -2.4, cy: 0, r: 1.05, fill: "#cfd7de" }, gLink);
+        el("circle", { cx: 2.4, cy: 0, r: 1.05, fill: "#cfd7de" }, gLink);
+        chainLinks.push(gLink);
+      }
+
+      // Build Realistic Pedals (metal cage, rubber grip, amber reflector)
+      function buildPedal(containerId, isNear) {
+        const g = document.getElementById(containerId);
+        const bodyFill = isNear ? "#2b3036" : "#1c2024";
+        const rimStroke = isNear ? "#cfd7de" : "#778088";
+        el("rect", { x: -20, y: -5.5, width: 40, height: 11, rx: 3.2, fill: bodyFill, stroke: rimStroke, "stroke-width": 1.6 }, g);
+        // Rubber tread ridges
+        for (let x = -14; x <= 14; x += 7) {
+          el("line", { x1: x, y1: -5.5, x2: x, y2: -7.2, stroke: "#181b1f", "stroke-width": 2.4, "stroke-linecap": "round" }, g);
+          el("line", { x1: x, y1: 5.5, x2: x, y2: 7.2, stroke: "#181b1f", "stroke-width": 2.4, "stroke-linecap": "round" }, g);
+        }
+        // Amber side reflector
+        el("rect", { x: -10, y: -2.2, width: 20, height: 4.4, rx: 1.4, fill: isNear ? "#f29b38" : "#a3611d" }, g);
+        // Pedal spindle nut
+        el("circle", { cx: 0, cy: 0, r: 3.4, fill: isNear ? "#dde5ec" : "#7e8790", stroke: "#3b4249", "stroke-width": 1 }, g);
+      }
+      buildPedal("far-pedal", false);
+      buildPedal("near-pedal", true);
+
+      // =====================================================================
+      // 3. BUILD REALISTIC PELICAN FEATHER LAYERS (BODY, TAIL, NECK, CREST)
+      // =====================================================================
+      function addFeather(parent, cx, cy, len, wid, angleDeg, fill, stroke, rachisOpacity = 0.45) {
+        const g = el("g", { transform: `translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) rotate(${angleDeg.toFixed(1)})` }, parent);
+        const d = `M 0 0
+                   C ${(len * 0.28).toFixed(1)} ${(-wid * 0.65).toFixed(1)},
+                     ${(len * 0.78).toFixed(1)} ${(-wid * 0.52).toFixed(1)},
+                     ${len.toFixed(1)} 0
+                   C ${(len * 0.78).toFixed(1)} ${(wid * 0.52).toFixed(1)},
+                     ${(len * 0.28).toFixed(1)} ${(wid * 0.65).toFixed(1)},
+                     0 0 Z`;
+        el("path", { d, fill, stroke, "stroke-width": 0.75 }, g);
+        if (rachisOpacity > 0) {
+          el("path", {
+            d: `M 2 0 Q ${(len * 0.5).toFixed(1)} ${(-wid * 0.06).toFixed(1)}, ${(len * 0.92).toFixed(1)} 0`,
+            fill: "none", stroke: "#ffffff", "stroke-width": 0.85, opacity: rachisOpacity
+          }, g);
+        }
+        return g;
+      }
+
+      // Tail feathers (stiff layered rectrices with charcoal tips)
+      const tailGroup = document.getElementById("pelican-tail");
+      const tailSpecs = [
+        { x: 496, y: 325, l: 74, w: 16, a: 166, f: "url(#primaryFeatherGrad)", s: "#2a3038" },
+        { x: 498, y: 318, l: 78, w: 17, a: 173, f: "#c8ced6", s: "#9ba5b3" },
+        { x: 500, y: 312, l: 74, w: 18, a: 180, f: "#e5e0d8", s: "#b3bcc8" },
+        { x: 506, y: 306, l: 64, w: 19, a: 186, f: "#f6f0e4", s: "#c5ccd6" },
+        { x: 512, y: 302, l: 52, w: 18, a: 192, f: "#fffbf2", s: "#d4d8de" }
+      ];
+      tailSpecs.forEach(t => addFeather(tailGroup, t.x, t.y, t.l, t.w, t.a, t.f, t.s, 0.55));
+
+      // Torso & breast overlapping realistic plumage contours
+      const bodyFeathers = document.getElementById("pelican-body-feathers");
+      const bodyRows = [
+        // Lower flank coverts
+        { x: 516, y: 344, l: 38, w: 15, a: 170, f: "#d0d5dd", s: "#a4afbe" },
+        { x: 544, y: 355, l: 42, w: 16, a: 164, f: "#dce0e5", s: "#adb7c5" },
+        { x: 576, y: 360, l: 44, w: 16, a: 158, f: "#e5e3dd", s: "#b6bfcb" },
+        { x: 608, y: 356, l: 42, w: 16, a: 150, f: "#ece6dc", s: "#bcc3cd" },
+        // Mid-chest plush feathers
+        { x: 534, y: 318, l: 44, w: 18, a: 162, f: "#ede8de", s: "#c2c9d3" },
+        { x: 568, y: 325, l: 46, w: 18, a: 154, f: "#f4eee2", s: "#c9cfd7" },
+        { x: 604, y: 326, l: 48, w: 19, a: 146, f: "#f9f2e5", s: "#d2d5da" },
+        { x: 636, y: 316, l: 46, w: 19, a: 136, f: "#fdf6e9", s: "#d9d7d4" },
+        { x: 658, y: 294, l: 42, w: 18, a: 122, f: "#fffaf0", s: "#dfd9ce" },
+        // Upper scapulars & shoulder mantle
+        { x: 540, y: 288, l: 48, w: 20, a: 155, f: "#f5efe3", s: "#c7cdd6" },
+        { x: 576, y: 278, l: 50, w: 21, a: 148, f: "#faf4e8", s: "#cfd3da" },
+        { x: 614, y: 272, l: 48, w: 20, a: 138, f: "#fffaf0", s: "#d8dadf" }
+      ];
+      bodyRows.forEach(f => addFeather(bodyFeathers, f.x, f.y, f.l, f.w, f.a, f.f, f.s, 0.35));
+
+      // Fine neck feather texture lines
+      const neckFeathersEl = document.getElementById("neck-feathers");
+      const neckStrokes = [
+        "M 612 232 Q 618 220 626 212",
+        "M 616 210 Q 623 196 633 188",
+        "M 622 188 Q 630 174 642 167",
+        "M 630 236 Q 637 222 646 214",
+        "M 634 212 Q 642 198 652 190",
+        "M 642 242 Q 649 228 656 218",
+        "M 628 168 Q 638 158 650 155"
+      ];
+      neckStrokes.forEach(d => {
+        el("path", { d, fill: "none", stroke: "#b7c1ce", "stroke-width": 1.15, "stroke-linecap": "round" }, neckFeathersEl);
+      });
+
+      // Wispy nape crest plumes (animated in coastal breeze!)
+      const crestGroup = document.getElementById("pelican-crest");
+      const crestFeathers = [];
+      const crestSpecs = [
+        { d: "M -34 -6 C -52 -16, -68 -14, -84 -4", w: 4.2, c: "#f4ede1" },
+        { d: "M -36 1 C -56 -7, -74 -3, -90 10", w: 3.6, c: "#eae3d8" },
+        { d: "M -34 9 C -52 5, -68 12, -80 24", w: 3.0, c: "#d9d8d5" },
+        { d: "M -28 -14 C -44 -26, -60 -26, -74 -18", w: 3.2, c: "#fffbf2" }
+      ];
+      crestSpecs.forEach((c, idx) => {
+        const p = el("path", {
+          d: c.d, fill: "none", stroke: c.c, "stroke-width": c.w,
+          "stroke-linecap": "round", opacity: 0.94
+        }, crestGroup);
+        crestFeathers.push({ node: p, phase: idx * 1.1 });
+      });
+
+      // =====================================================================
+      // 4. REALISTIC PARALLAX COASTAL SCENERY (CLOUDS, WATER, PIER, ROAD)
+      // =====================================================================
+      const rand = mulberry32(20261119);
+
+      // Build soft sunlit clouds
+      function buildClouds(containerId, count, yMin, yMax, scaleMin, scaleMax, fillColor) {
+        const g = document.getElementById(containerId);
+        const items = [];
+        for (let i = 0; i < count; i++) {
+          const x = (i / count) * 1800 - 150 + rand() * 140;
+          const y = yMin + rand() * (yMax - yMin);
+          const s = scaleMin + rand() * (scaleMax - scaleMin);
+          const cg = el("g", { transform: `translate(${x.toFixed(1)}, ${y.toFixed(1)}) scale(${s.toFixed(2)})` }, g);
+          el("ellipse", { cx: 0, cy: 0, rx: 68, ry: 18, fill: fillColor, opacity: 0.72 }, cg);
+          el("ellipse", { cx: -26, cy: -8, rx: 38, ry: 16, fill: "#fffaf0", opacity: 0.75 }, cg);
+          el("ellipse", { cx: 18, cy: -10, rx: 44, ry: 18, fill: "#fff7e8", opacity: 0.68 }, cg);
+          el("ellipse", { cx: 48, cy: -2, rx: 28, ry: 11, fill: fillColor, opacity: 0.6 }, cg);
+          items.push({ node: cg, x, y, s });
+        }
+        return items;
+      }
+      const cloudsFar  = buildClouds("clouds-far",  6, 58, 175, 0.85, 1.45, "#f3e2cc");
+      const cloudsNear = buildClouds("clouds-near", 5, 130, 265, 0.65, 1.18, "#fbe7cc");
+
+      // Distant soaring seabirds (gentle flap)
+      const birdsGroup = document.getElementById("distant-birds");
+      const distantBirds = [];
+      for (let i = 0; i < 6; i++) {
+        const bx = 180 + i * 210 + rand() * 90;
+        const by = 180 + rand() * 150;
+        const bs = 0.45 + rand() * 0.42;
+        const p = el("path", {
+          d: "M -14 2 Q -6 -6 0 0 Q 6 -6 14 2",
+          fill: "none", stroke: "#475d73", "stroke-width": 2.1, "stroke-linecap": "round"
+        }, birdsGroup);
+        distantBirds.push({ node: p, x: bx, y: by, s: bs, phase: rand() * Math.PI * 2, speed: 12 + rand() * 14 });
+      }
+
+      // Shimmering ocean ripples
+      const oceanRipplesEl = document.getElementById("ocean-ripples");
+      const oceanRipples = [];
+      for (let i = 0; i < 64; i++) {
+        const depth = rand(); // 0 near horizon, 1 closer to shore
+        const y = 463 + depth * depth * 96;
+        const x = rand() * 1450;
+        const w = 12 + depth * 56 + rand() * 24;
+        const inSunPath = Math.abs(x - (1092 + (y - 458) * 0.12)) < 90 + depth * 85;
+        const color = inSunPath ? "#fff0c4" : "#89b2cc";
+        const line = el("line", {
+          x1: 0, y1: 0, x2: w.toFixed(1), y2: 0,
+          stroke: color,
+          "stroke-width": (0.8 + depth * 1.9).toFixed(2),
+          "stroke-linecap": "round",
+          opacity: inSunPath ? (0.45 + rand() * 0.42).toFixed(2) : (0.14 + rand() * 0.2).toFixed(2)
+        }, oceanRipplesEl);
+        oceanRipples.push({ node: line, x, y, depth, phase: rand() * 6.28, w });
+      }
+
+      // Midground coastal seawall, timber posts, rope railing & beach grass (seamless 1600px tile)
+      const MID_TILE = 1600;
+      const midScroll = document.getElementById("midground-scroll");
+      const midTileA = el("g", {}, midScroll);
+      const midTileB = el("g", {}, midScroll);
+
+      function populateMidgroundTile(parent) {
+        // Seawall vertical concrete expansion joints
+        for (let x = 0; x < MID_TILE; x += 160) {
+          el("line", { x1: x, y1: 562, x2: x, y2: 604, stroke: "#756c62", "stroke-width": 1.6, opacity: 0.65 }, parent);
+          // Subtle weathering streak
+          el("rect", { x: x + 24, y: 568, width: 58, height: 14, rx: 3, fill: "#9e9486", opacity: 0.25 }, parent);
+        }
+        // Wooden promenade railing posts + double horizontal timber rails
+        el("rect", { x: 0, y: 500, width: MID_TILE, height: 7.5, fill: "#8b705a", stroke: "#554132", "stroke-width": 0.9 }, parent);
+        el("rect", { x: 0, y: 500, width: MID_TILE, height: 2.2, fill: "#bfa287", opacity: 0.65 }, parent);
+        el("rect", { x: 0, y: 530, width: MID_TILE, height: 6, fill: "#7a614d", stroke: "#4c392b", "stroke-width": 0.8 }, parent);
+
+        for (let x = 40; x < MID_TILE; x += 200) {
+          // Weathered timber post
+          el("rect", { x: x - 7, y: 486, width: 14, height: 76, rx: 1.5, fill: "url(#woodPostGrad)", stroke: "#463528", "stroke-width": 0.9 }, parent);
+          // Post cap
+          el("rect", { x: x - 9, y: 483, width: 18, height: 5.5, rx: 1.2, fill: "#a98c72", stroke: "#523e2e", "stroke-width": 0.8 }, parent);
+          // Bolt heads
+          el("circle", { cx: x, cy: 504, r: 1.6, fill: "#3e362f" }, parent);
+          el("circle", { cx: x, cy: 533, r: 1.6, fill: "#3e362f" }, parent);
+        }
+
+        // Occasional coastal beach grass & sea-oats tufts peeking over seawall
+        const grassPositions = [110, 295, 530, 740, 965, 1180, 1425];
+        grassPositions.forEach((gx, idx) => {
+          const blades = 7 + (idx % 4);
+          for (let b = 0; b < blades; b++) {
+            const spread = (b - blades / 2) * 5.2;
+            const h = 16 + ((b * 13 + idx * 7) % 18);
+            const lean = spread * 1.15 - 6; // leaning slightly back in sea breeze
+            el("path", {
+              d: `M ${(gx + spread * 0.4).toFixed(1)} 560 Q ${(gx + spread * 0.7).toFixed(1)} ${(560 - h * 0.55).toFixed(1)}, ${(gx + lean).toFixed(1)} ${(560 - h).toFixed(1)}`,
+              fill: "none",
+              stroke: b % 2 === 0 ? "#6e7e57" : "#8b9668",
+              "stroke-width": 2.1, "stroke-linecap": "round"
+            }, parent);
+          }
+        });
+      }
+      populateMidgroundTile(midTileA);
+      populateMidgroundTile(midTileB);
+
+      // Foreground Asphalt Road Tile (1600px loop, mathematically locked to wheel rotation!)
+      const ROAD_TILE = 1600;
+      const roadScroll = document.getElementById("road-scroll");
+      const roadTileA = el("g", {}, roadScroll);
+      const roadTileB = el("g", {}, roadScroll);
+
+      function populateRoadTile(parent) {
+        // Faded painted coastal bike-lane edge line
+        el("line", { x1: 0, y1: 632, x2: ROAD_TILE, y2: 632, stroke: "#e5decb", "stroke-width": 4, opacity: 0.48 }, parent);
+        // Dashed bike lane centerline below the bike
+        for (let x = 20; x < ROAD_TILE; x += 200) {
+          el("rect", { x, y: 742, width: 92, height: 7, rx: 2, fill: "#e8d6a2", opacity: 0.46 }, parent);
+        }
+        // Curb joints
+        for (let x = 0; x < ROAD_TILE; x += 160) {
+          el("line", { x1: x, y1: 604, x2: x - 6, y2: 615, stroke: "#756e64", "stroke-width": 1.6, opacity: 0.6 }, parent);
+        }
+        // Realistic pebbles, asphalt aggregate & subtle hairline road cracks
+        const rRoad = mulberry32(99123);
+        for (let i = 0; i < 140; i++) {
+          const px = rRoad() * ROAD_TILE;
+          const py = 620 + rRoad() * 190;
+          const rx = 1.2 + rRoad() * 3.4;
+          const ry = 0.7 + rRoad() * 1.5;
+          el("ellipse", {
+            cx: px.toFixed(1), cy: py.toFixed(1), rx: rx.toFixed(1), ry: ry.toFixed(1),
+            fill: rRoad() > 0.5 ? "#7a7d84" : "#2e3136",
+            opacity: (0.22 + rRoad() * 0.35).toFixed(2)
+          }, parent);
+        }
+        // Subtle weathered tarmac tar seams
+        const cracks = [
+          "M 210 618 L 228 652 L 218 696 L 245 734",
+          "M 760 662 L 796 675 L 818 712",
+          "M 1240 616 L 1222 658 L 1254 692 L 1242 748"
+        ];
+        cracks.forEach(d => {
+          el("path", { d, fill: "none", stroke: "#282a2f", "stroke-width": 1.5, opacity: 0.42 }, parent);
+        });
+        // Scattered fallen dry eucalyptus leaves along curb shoulder
+        for (let i = 0; i < 14; i++) {
+          const lx = rRoad() * ROAD_TILE;
+          const ly = 617 + rRoad() * 24;
+          const ang = -25 + rRoad() * 50;
+          el("ellipse", {
+            cx: lx.toFixed(1), cy: ly.toFixed(1), rx: 6.5, ry: 2.1,
+            transform: `rotate(${ang.toFixed(1)} ${lx.toFixed(1)} ${ly.toFixed(1)})`,
+            fill: i % 2 === 0 ? "#9c7c52" : "#7e6844", opacity: 0.65
+          }, parent);
+        }
+      }
+      populateRoadTile(roadTileA);
+      populateRoadTile(roadTileB);
+
+      // Sunlit sea-breeze dust/spray motes
+      const motesEl = document.getElementById("breeze-motes");
+      const motes = [];
+      for (let i = 0; i < 24; i++) {
+        const mx = rand() * 1400;
+        const my = 120 + rand() * 560;
+        const mr = 1.1 + rand() * 2.1;
+        const c = el("circle", { cx: mx, cy: my, r: mr, fill: "#fff2cc", opacity: (0.14 + rand() * 0.32).toFixed(2) }, motesEl);
+        motes.push({ node: c, x: mx, y: my, speed: 60 + rand() * 95, phase: rand() * 6.28 });
+      }
+
+      // =====================================================================
+      // 5. ANALYTICAL 2-BONE INVERSE KINEMATICS (LEGS & WINGS)
+      // =====================================================================
+      function solveTwoBoneIK(root, target, L1, L2, bendSign) {
+        const dx = target.x - root.x;
+        const dy = target.y - root.y;
+        const rawDist = Math.hypot(dx, dy);
+        const maxDist = L1 + L2 - 1.5;
+        const minDist = Math.abs(L1 - L2) + 1.5;
+        const d = Math.max(minDist, Math.min(maxDist, rawDist));
+
+        const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
+        const h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+        const ux = dx / (rawDist || 1);
+        const uy = dy / (rawDist || 1);
+
+        // Midpoint along root->target
+        const mx = root.x + a * ux;
+        const my = root.y + a * uy;
+
+        // Perpendicular vector (bendSign = +1 bends toward +X when pointing down)
+        const px = uy * bendSign;
+        const py = -ux * bendSign;
+
+        return {
+          x: mx + h * px,
+          y: my + h * py
+        };
+      }
+
+      // =====================================================================
+      // 6. REALISTIC PELICAN LEG & TOTIPALMATE WEBBED FOOT RENDERER
+      // =====================================================================
+      function createLegRig(containerId, isNear) {
+        const g = document.getElementById(containerId);
+        const thighFill = isNear ? "url(#thighPlumageNear)" : "url(#thighPlumageFar)";
+        const legFill = isNear ? "url(#legOrangeNear)" : "url(#legOrangeFar)";
+        const strokeLeg = isNear ? "#8c3b13" : "#5e270c";
+
+        const thighPath = el("path", { fill: thighFill, stroke: isNear ? "#b3bcc8" : "#808a99", "stroke-width": 1 }, g);
+        const thighFeatherLine = el("path", { fill: "none", stroke: isNear ? "#ffffff" : "#b8c0cc", "stroke-width": 1.6, opacity: 0.65 }, g);
+        const shinPath = el("path", { fill: legFill, stroke: strokeLeg, "stroke-width": 1.1, "stroke-linejoin": "round" }, g);
+        const kneeScale = el("circle", { r: 7.5, fill: isNear ? "#e88435" : "#a85422", stroke: strokeLeg, "stroke-width": 1 }, g);
+        const ankleJoint = el("circle", { r: 5.6, fill: isNear ? "#e57f30" : "#a04f20", stroke: strokeLeg, "stroke-width": 1 }, g);
+        const shinScales = el("path", { fill: "none", stroke: strokeLeg, "stroke-width": 1, opacity: 0.42 }, g);
+
+        // Realistic Totipalmate Webbed Foot (all toes joined by amber leathery web)
+        const footGroup = el("g", {}, g);
+        // Back hallux & webbing membrane resting atop pedal platform
+        el("path", {
+          d: "M -14 1 C -4 5, 12 6, 30 3 C 34 2, 34 -2, 29 -4 C 17 -7, 4 -8, -10 -5 Z",
+          fill: isNear ? "url(#webbingGrad)" : "#9c4d1f",
+          stroke: strokeLeg, "stroke-width": 1
+        }, footGroup);
+        // Three sculpted forward toes gripping over pedal front edge + curved keratin claws
+        el("path", { d: "M -4 -4 C 8 -6, 21 -5, 31 -2", fill: "none", stroke: isNear ? "#f59d43" : "#b45a25", "stroke-width": 4.2, "stroke-linecap": "round" }, footGroup);
+        el("path", { d: "M -3 0 C 10 1, 22 2, 32 4", fill: "none", stroke: isNear ? "#e68332" : "#a44f1f", "stroke-width": 4.4, "stroke-linecap": "round" }, footGroup);
+        el("path", { d: "M -6 2 C 5 5, 16 6, 25 6", fill: "none", stroke: isNear ? "#cf6923" : "#8e4118", "stroke-width": 3.8, "stroke-linecap": "round" }, footGroup);
+        // Rear gripping toe (hallux)
+        el("path", { d: "M -6 -1 C -12 2, -16 4, -19 3", fill: "none", stroke: isNear ? "#d97329" : "#96461b", "stroke-width": 3.8, "stroke-linecap": "round" }, footGroup);
+        // Small realistic keratin claws
+        el("path", { d: "M 31 -2 Q 35 -1 36 2", fill: "none", stroke: "#4a3324", "stroke-width": 1.6, "stroke-linecap": "round" }, footGroup);
+        el("path", { d: "M 32 4 Q 36 5 37 8", fill: "none", stroke: "#4a3324", "stroke-width": 1.6, "stroke-linecap": "round" }, footGroup);
+
+        return {
+          update(hip, knee, pedal, footAngleDeg) {
+            const ankle = { x: pedal.x - 2, y: pedal.y - 6 };
+            // Feathered drumstick / upper leg tapering gracefully to knee
+            const dx1 = knee.x - hip.x, dy1 = knee.y - hip.y;
+            const len1 = Math.hypot(dx1, dy1) || 1;
+            const nx1 = -dy1 / len1, ny1 = dx1 / len1;
+
+            const wHip = 26, wKnee = 8.5;
+            const pA = [hip.x + nx1 * wHip, hip.y + ny1 * wHip];
+            const pB = [hip.x - nx1 * (wHip * 0.85), hip.y - ny1 * (wHip * 0.85)];
+            const pC = [knee.x - nx1 * wKnee, knee.y - ny1 * wKnee];
+            const pD = [knee.x + nx1 * wKnee, knee.y + ny1 * wKnee];
+
+            const midX = (hip.x + knee.x) * 0.5;
+            const midY = (hip.y + knee.y) * 0.5;
+            const cFront = [midX + nx1 * 18, midY + ny1 * 18];
+            const cBack  = [midX - nx1 * 15, midY - ny1 * 15];
+
+            thighPath.setAttribute("d",
+              `M ${pA[0].toFixed(1)} ${pA[1].toFixed(1)}
+               Q ${cFront[0].toFixed(1)} ${cFront[1].toFixed(1)}, ${pD[0].toFixed(1)} ${pD[1].toFixed(1)}
+               L ${pC[0].toFixed(1)} ${pC[1].toFixed(1)}
+               Q ${cBack[0].toFixed(1)} ${cBack[1].toFixed(1)}, ${pB[0].toFixed(1)} ${pB[1].toFixed(1)} Z`
+            );
+            thighFeatherLine.setAttribute("d",
+              `M ${(hip.x + nx1 * 11).toFixed(1)} ${(hip.y + ny1 * 11).toFixed(1)}
+               Q ${(midX + nx1 * 10).toFixed(1)} ${(midY + ny1 * 10).toFixed(1)}, ${(knee.x + nx1 * 3).toFixed(1)} ${(knee.y + ny1 * 3).toFixed(1)}`
+            );
+
+            // Scaly lower avian tarsus from knee to ankle
+            const dx2 = ankle.x - knee.x, dy2 = ankle.y - knee.y;
+            const len2 = Math.hypot(dx2, dy2) || 1;
+            const nx2 = -dy2 / len2, ny2 = dx2 / len2;
+
+            const wTop = 7.4, wBot = 5.4;
+            const sA = [knee.x + nx2 * wTop, knee.y + ny2 * wTop];
+            const sB = [knee.x - nx2 * wTop, knee.y - ny2 * wTop];
+            const sC = [ankle.x - nx2 * wBot, ankle.y - ny2 * wBot];
+            const sD = [ankle.x + nx2 * wBot, ankle.y + ny2 * wBot];
+
+            shinPath.setAttribute("d",
+              `M ${sA[0].toFixed(1)} ${sA[1].toFixed(1)}
+               L ${sD[0].toFixed(1)} ${sD[1].toFixed(1)}
+               L ${sC[0].toFixed(1)} ${sC[1].toFixed(1)}
+               L ${sB[0].toFixed(1)} ${sB[1].toFixed(1)} Z`
+            );
+
+            kneeScale.setAttribute("cx", knee.x.toFixed(1));
+            kneeScale.setAttribute("cy", knee.y.toFixed(1));
+            ankleJoint.setAttribute("cx", ankle.x.toFixed(1));
+            ankleJoint.setAttribute("cy", ankle.y.toFixed(1));
+
+            // Realistic scutellate (transverse scale) markings along the orange shin
+            let scaleD = "";
+            for (let t = 0.16; t <= 0.88; t += 0.12) {
+              const cx = knee.x + dx2 * t;
+              const cy = knee.y + dy2 * t;
+              const w = wTop + (wBot - wTop) * t - 1;
+              scaleD += `M ${(cx - nx2 * w).toFixed(1)} ${(cy - ny2 * w).toFixed(1)} L ${(cx + nx2 * w).toFixed(1)} ${(cy + ny2 * w).toFixed(1)} `;
+            }
+            shinScales.setAttribute("d", scaleD);
+
+            // Position webbed foot squarely atop the pedal surface
+            footGroup.setAttribute("transform", `translate(${pedal.x.toFixed(1)}, ${(pedal.y - 6).toFixed(1)}) rotate(${footAngleDeg.toFixed(1)})`);
+          }
+        };
+      }
+
+      const farLegRig  = createLegRig("pelican-far-leg", false);
+      const nearLegRig = createLegRig("pelican-near-leg", true);
+
+      // =====================================================================
+      // 7. REALISTIC MULTI-LAYERED PELICAN WING RIGS (STEERING HANDLEBARS)
+      // =====================================================================
+      function createWingRig(containerId, isNear) {
+        const g = document.getElementById(containerId);
+
+        // Jet-black primary flight feathers trailing gracefully backward from forearm/wrist
+        const primaryGroup = el("g", {}, g);
+        const primaryFeathers = [];
+        const primaryQuills = [];
+        const pCount = isNear ? 7 : 5;
+        for (let i = 0; i < pCount; i++) {
+          const p = el("path", {
+            fill: isNear ? "url(#primaryFeatherGrad)" : "#282e37",
+            stroke: "#13161b", "stroke-width": 0.8
+          }, primaryGroup);
+          primaryFeathers.push(p);
+          if (isNear) {
+            const q = el("path", {
+              fill: "none", stroke: "#8f99a6", "stroke-width": 0.9, opacity: 0.45
+            }, primaryGroup);
+            primaryQuills.push(q);
+          }
+        }
+
+        // Main folded wing body (humerus + ulna/radius contour)
+        const wingMain = el("path", {
+          fill: isNear ? "url(#wingCovertGrad)" : "url(#farWingGrad)",
+          stroke: isNear ? "#aab4c2" : "#778292",
+          "stroke-width": 1.1
+        }, g);
+
+        // Secondary & median overlapping covert feather rows strictly anchored inside wing bones
+        const covertGroup = el("g", {}, g);
+        const covertPaths = [];
+        const cCount = isNear ? 12 : 6;
+        for (let i = 0; i < cCount; i++) {
+          const p = el("path", {
+            fill: isNear ? (i < 6 ? "#fcf6ea" : "#ebe5da") : "#adb6c4",
+            stroke: isNear ? "#bac2ce" : "#7f8a99",
+            "stroke-width": 0.85
+          }, covertGroup);
+          covertPaths.push(p);
+        }
+
+        // Wingtip alula / carpal feathers gently wrapping the leather handlebar grip
+        const gripTip = el("path", {
+          fill: isNear ? "#efe8dc" : "#9aa4b3",
+          stroke: isNear ? "#adb6c2" : "#6f7987",
+          "stroke-width": 1
+        }, g);
+
+        const highlightCurve = el("path", {
+          fill: "none",
+          stroke: "#fffef8",
+          "stroke-width": isNear ? 2.4 : 1.2,
+          "stroke-linecap": "round",
+          opacity: isNear ? 0.72 : 0.32
+        }, g);
+
+        return {
+          update(shoulder, grip, windFlutter) {
+            // Solve natural hanging elbow below the shoulder-to-grip line
+            const L1 = isNear ? 92 : 84;
+            const L2 = isNear ? 88 : 80;
+            const elbow = solveTwoBoneIK(shoulder, grip, L1, L2, -1);
+
+            // Main sculpted avian wing contour
+            const dWing = `M ${(shoulder.x - 16).toFixed(1)} ${(shoulder.y - 12).toFixed(1)}
+                           C ${(shoulder.x + 28).toFixed(1)} ${(shoulder.y - 14).toFixed(1)},
+                             ${(elbow.x + 18).toFixed(1)} ${(elbow.y - 24).toFixed(1)},
+                             ${(grip.x + 8).toFixed(1)} ${(grip.y - 6).toFixed(1)}
+                           C ${(grip.x + 12).toFixed(1)} ${(grip.y + 8).toFixed(1)},
+                             ${(grip.x - 8).toFixed(1)} ${(grip.y + 16).toFixed(1)},
+                             ${(elbow.x - 4).toFixed(1)} ${(elbow.y + 24).toFixed(1)}
+                           C ${(elbow.x - 42).toFixed(1)} ${(elbow.y + 18).toFixed(1)},
+                             ${(shoulder.x - 44).toFixed(1)} ${(shoulder.y + 22).toFixed(1)},
+                             ${(shoulder.x - 16).toFixed(1)} ${(shoulder.y - 12).toFixed(1)} Z`;
+            wingMain.setAttribute("d", dWing);
+
+            highlightCurve.setAttribute("d",
+              `M ${(shoulder.x - 6).toFixed(1)} ${(shoulder.y - 8).toFixed(1)}
+               Q ${(elbow.x + 12).toFixed(1)} ${(elbow.y - 19).toFixed(1)},
+                 ${(grip.x - 6).toFixed(1)} ${(grip.y - 6).toFixed(1)}`
+            );
+
+            // Update trailing dark primary flight feathers sweeping horizontally back in an aerodynamic fan
+            for (let i = 0; i < pCount; i++) {
+              const t = i / (pCount - 1);
+              const bx = elbow.x + (grip.x - elbow.x) * (0.16 + t * 0.74);
+              const by = elbow.y + (grip.y - elbow.y) * (0.16 + t * 0.74) + 6 - t * 3;
+              const fLen = (isNear ? 68 : 54) + t * 24; // outer primaries near wrist are longest!
+              const ang = (169 + t * 11) * (Math.PI / 180) + Math.sin(windFlutter + i * 0.65) * 0.022;
+              const ex = bx + Math.cos(ang) * fLen;
+              const ey = by + Math.sin(ang) * fLen;
+              const perpX = -Math.sin(ang) * 7.2;
+              const perpY = Math.cos(ang) * 7.2;
+              const mx = (bx + ex) * 0.5 + perpX;
+              const my = (by + ey) * 0.5 + perpY;
+              const mx2 = (bx + ex) * 0.5 - perpX;
+              const my2 = (by + ey) * 0.5 - perpY;
+              primaryFeathers[i].setAttribute("d",
+                `M ${bx.toFixed(1)} ${by.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)} Q ${mx2.toFixed(1)} ${my2.toFixed(1)}, ${bx.toFixed(1)} ${by.toFixed(1)} Z`
+              );
+              if (isNear && primaryQuills[i]) {
+                primaryQuills[i].setAttribute("d",
+                  `M ${bx.toFixed(1)} ${by.toFixed(1)} L ${(bx + Math.cos(ang) * fLen * 0.88).toFixed(1)} ${(by + Math.sin(ang) * fLen * 0.88).toFixed(1)}`
+                );
+              }
+            }
+
+            // Update overlapping layered covert feathers anchored strictly along humerus & forearm centerline
+            const halfC = cCount / 2;
+            for (let i = 0; i < cCount; i++) {
+              const isForearm = i >= halfC;
+              const col = (i % halfC) / Math.max(1, halfC - 1);
+              let sx, sy, angDeg, fl;
+              if (!isForearm) {
+                // Upper wing (shoulder -> elbow) coverts
+                const u = 0.14 + col * 0.74;
+                sx = shoulder.x + (elbow.x - shoulder.x) * u - 4;
+                sy = shoulder.y + (elbow.y - shoulder.y) * u + 4;
+                angDeg = 166 + col * 6;
+                fl = isNear ? 34 : 26;
+              } else {
+                // Forearm (elbow -> grip) secondary coverts
+                const u = 0.08 + col * 0.68;
+                sx = elbow.x + (grip.x - elbow.x) * u;
+                sy = elbow.y + (grip.y - elbow.y) * u + 2;
+                angDeg = 172 + col * 6;
+                fl = isNear ? 40 : 28;
+              }
+              const fw = isNear ? 9.2 : 7.2;
+              const ang = angDeg * (Math.PI / 180);
+              const tx = sx + Math.cos(ang) * fl;
+              const ty = sy + Math.sin(ang) * fl;
+              const px = -Math.sin(ang) * fw;
+              const py = Math.cos(ang) * fw;
+              covertPaths[i].setAttribute("d",
+                `M ${sx.toFixed(1)} ${sy.toFixed(1)}
+                 Q ${((sx + tx) * 0.5 + px).toFixed(1)} ${((sy + ty) * 0.5 + py).toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}
+                 Q ${((sx + tx) * 0.5 - px).toFixed(1)} ${((sy + ty) * 0.5 - py).toFixed(1)}, ${sx.toFixed(1)} ${sy.toFixed(1)} Z`
+              );
+            }
+
+            // Wingtip feathers curling neatly around the leather handlebar grip
+            gripTip.setAttribute("d",
+              `M ${(grip.x - 14).toFixed(1)} ${(grip.y - 9).toFixed(1)}
+               C ${(grip.x + 4).toFixed(1)} ${(grip.y - 12).toFixed(1)},
+                 ${(grip.x + 15).toFixed(1)} ${(grip.y - 2).toFixed(1)},
+                 ${(grip.x + 10).toFixed(1)} ${(grip.y + 10).toFixed(1)}
+               C ${(grip.x + 4).toFixed(1)} ${(grip.y + 15).toFixed(1)},
+                 ${(grip.x - 8).toFixed(1)} ${(grip.y + 12).toFixed(1)},
+                 ${(grip.x - 14).toFixed(1)} ${(grip.y + 6).toFixed(1)} Z`
+            );
+          }
+        };
+      }
+
+      const farWingRig  = createWingRig("pelican-far-wing", false);
+      const nearWingRig = createWingRig("pelican-near-wing", true);
+
+      // =====================================================================
+      // 8. LIGHTING THEMES (GOLDEN HOUR / COASTAL NOON / SUNSET GLOW)
+      // =====================================================================
+      const THEMES = {
+        golden: {
+          sky: ["#356898", "#6a9ec2", "#d7c5ab", "#f5c68c"],
+          sunGlow: ["#fff8df", "#ffd995", "#f3a867", "#f3a867"],
+          ocean: ["#4e7fa0", "#3b6b8d", "#2c5372", "#214059"],
+          sunPos: [1092, 224],
+          atmosOpacity: 0.22,
+          beamOpacity: 0.08
+        },
+        morning: {
+          sky: ["#2068ad", "#5ca3dc", "#a8d2ee", "#dceef8"],
+          sunGlow: ["#ffffff", "#fff8dc", "#d7ecfa", "#d7ecfa"],
+          ocean: ["#2f7cb0", "#226596", "#184f7a", "#123e62"],
+          sunPos: [1020, 148],
+          atmosOpacity: 0.11,
+          beamOpacity: 0.02
+        },
+        sunset: {
+          sky: ["#2c2f5c", "#7d4f6d", "#d87d63", "#f6b26b"],
+          sunGlow: ["#fff2c2", "#ffae5c", "#e85f47", "#e85f47"],
+          ocean: ["#5e5575", "#4a4361", "#33324d", "#222338"],
+          sunPos: [1110, 362],
+          atmosOpacity: 0.32,
+          beamOpacity: 0.28
+        }
+      };
+
+      function applyTheme(name) {
+        const t = THEMES[name];
+        if (!t) return;
+        t.sky.forEach((c, i) => document.getElementById(`skyStop${i}`).setAttribute("stop-color", c));
+        t.sunGlow.forEach((c, i) => document.getElementById(`sunGlow${i}`).setAttribute("stop-color", c));
+        t.ocean.forEach((c, i) => document.getElementById(`oceanStop${i}`).setAttribute("stop-color", c));
+        document.getElementById("sun-group").setAttribute("transform", `translate(${t.sunPos[0]}, ${t.sunPos[1]})`);
+        document.getElementById("atmos-grade").setAttribute("opacity", t.atmosOpacity);
+        document.getElementById("headlight-beam").setAttribute("opacity", t.beamOpacity);
+      }
+
+      // =====================================================================
+      // 9. ANIMATION STATE, INTERACTION & REAL-TIME 60FPS PHYSICS LOOP
+      // =====================================================================
+      const dom = {
+        rearWheelSpin: document.getElementById("rear-wheel-spin"),
+        frontWheelSpin: document.getElementById("front-wheel-spin"),
+        chainringSpin: document.getElementById("chainring-spin"),
+        cassetteSpin: document.getElementById("cassette-spin"),
+        nearCrankArm: document.getElementById("near-crank-arm"),
+        nearCrankFlute: document.getElementById("near-crank-flute"),
+        farCrankArm: document.getElementById("far-crank-arm"),
+        nearPedal: document.getElementById("near-pedal"),
+        farPedal: document.getElementById("far-pedal"),
+        pelicanUpper: document.getElementById("pelican-upper-body"),
+        pelicanNeck: document.getElementById("pelican-neck-shape"),
+        neckContour: document.getElementById("neck-contour"),
+        neckHighlight: document.getElementById("neck-highlight"),
+        neckShadow: document.getElementById("neck-shadow"),
+        pelicanHead: document.getElementById("pelican-head-unit"),
+        pelicanPouch: document.getElementById("pelican-pouch-group"),
+        pelicanTail: document.getElementById("pelican-tail"),
+        blinkLid: document.getElementById("eye-blink-lid"),
+        shadowMain: document.getElementById("shadow-main"),
+        shadowBody: document.getElementById("shadow-body"),
+        bellWaves: document.getElementById("bell-waves"),
+        headland: document.getElementById("headland-parallax")
+      };
+
+      let playing = true;
+      let speedMult = 1.0;
+      let crankAngle = 0.4; // radians
+      let elapsed = 0;
+      let lastTs = performance.now();
+
+      // Blink & Bell secondary states
+      let nextBlinkAt = 2.6;
+      let blinkTimer = -1;
+      let bellRingTime = -1;
+
+      function triggerBell() {
+        bellRingTime = 0;
+      }
+
+      // UI Controls
+      const btnToggle = document.getElementById("btn-toggle");
+      const toggleIcon = document.getElementById("toggle-icon");
+      const toggleLabel = document.getElementById("toggle-label");
+      const speedSlider = document.getElementById("speed-slider");
+      const speedVal = document.getElementById("speed-val");
+
+      function setPlaying(state) {
+        playing = state;
+        toggleIcon.textContent = playing ? "⏸" : "▶";
+        toggleLabel.textContent = playing ? "暂停" : "播放";
+      }
+
+      btnToggle.addEventListener("click", () => setPlaying(!playing));
+      speedSlider.addEventListener("input", () => {
+        speedMult = parseFloat(speedSlider.value);
+        speedVal.textContent = speedMult.toFixed(1) + "x";
+      });
+      document.querySelectorAll("[data-theme]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-theme]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          applyTheme(btn.dataset.theme);
+        });
+      });
+      document.getElementById("btn-bell").addEventListener("click", triggerBell);
+      document.getElementById("brass-bell").addEventListener("click", triggerBell);
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          e.preventDefault();
+          setPlaying(!playing);
+        } else if (e.key === "b" || e.key === "B") {
+          triggerBell();
+        }
+      });
+
+      function tick(now) {
+        const dt = Math.min(0.05, (now - lastTs) / 1000);
+        lastTs = now;
+
+        if (playing) {
+          // Relaxed natural coastal cadence (~1.05 rev/sec at 1.0x)
+          const omegaCrank = 2 * Math.PI * 1.05 * speedMult;
+          crankAngle += omegaCrank * dt;
+          elapsed += dt;
+        }
+
+        // =================================================================
+        // A. EXACT MECHANICALLY COUPLED DRIVETRAIN & WHEEL ROTATION
+        // =================================================================
+        const wheelAngle = crankAngle * GEAR_RATIO;
+        const wheelDeg = (wheelAngle * 180) / Math.PI;
+        const crankDeg = (crankAngle * 180) / Math.PI;
+
+        dom.rearWheelSpin.setAttribute("transform", `translate(${RW.x}, ${RW.y}) rotate(${wheelDeg.toFixed(2)})`);
+        dom.frontWheelSpin.setAttribute("transform", `translate(${FW.x}, ${FW.y}) rotate(${wheelDeg.toFixed(2)})`);
+        dom.chainringSpin.setAttribute("transform", `rotate(${crankDeg.toFixed(2)})`);
+        dom.cassetteSpin.setAttribute("transform", `rotate(${wheelDeg.toFixed(2)})`);
+
+        // Roller chain links advancing at exact linear speed v = crankAngle * R_CHAINRING
+        const chainOffset = crankAngle * R_CHAINRING;
+        const linkSpacing = chainLoop.totalLen / LINK_COUNT;
+        for (let i = 0; i < LINK_COUNT; i++) {
+          const sample = chainLoop.sampleAt(i * linkSpacing + chainOffset);
+          chainLinks[i].setAttribute(
+            "transform",
+            `translate(${sample.x.toFixed(2)}, ${sample.y.toFixed(2)}) rotate(${sample.ang.toFixed(1)})`
+          );
+        }
+
+        // Near & Far Crank Arms + Pedals
+        const nearPedalPos = {
+          x: BB.x + Math.cos(crankAngle) * R_CRANK,
+          y: BB.y + Math.sin(crankAngle) * R_CRANK
+        };
+        const farAngle = crankAngle + Math.PI;
+        const farPedalPos = {
+          x: BB.x + Math.cos(farAngle) * R_CRANK,
+          y: BB.y + Math.sin(farAngle) * R_CRANK
+        };
+
+        dom.nearCrankArm.setAttribute("x2", nearPedalPos.x.toFixed(2));
+        dom.nearCrankArm.setAttribute("y2", nearPedalPos.y.toFixed(2));
+        dom.nearCrankFlute.setAttribute("x2", nearPedalPos.x.toFixed(2));
+        dom.nearCrankFlute.setAttribute("y2", nearPedalPos.y.toFixed(2));
+        dom.farCrankArm.setAttribute("x2", farPedalPos.x.toFixed(2));
+        dom.farCrankArm.setAttribute("y2", farPedalPos.y.toFixed(2));
+
+        // Natural slight ankle/pedal tilt during power downstroke vs upstroke
+        const nearPedalTilt = Math.sin(crankAngle - 0.35) * 9;
+        const farPedalTilt  = Math.sin(farAngle - 0.35) * 9;
+
+        dom.nearPedal.setAttribute("transform", `translate(${nearPedalPos.x.toFixed(2)}, ${nearPedalPos.y.toFixed(2)}) rotate(${nearPedalTilt.toFixed(1)})`);
+        dom.farPedal.setAttribute("transform",  `translate(${farPedalPos.x.toFixed(2)}, ${farPedalPos.y.toFixed(2)}) rotate(${farPedalTilt.toFixed(1)})`);
+
+        // =================================================================
+        // B. PELICAN ORGANIC BODY MOTION, IK LEGS, WINGS & HEAD STABILIZATION
+        // =================================================================
+        // Subtle 2x cadence pedaling bob + gentle breathing
+        const pedalBob = Math.sin(crankAngle * 2 - 0.4) * 3.4;
+        const torsoRock = Math.sin(crankAngle) * 1.4;
+        const breathe = Math.sin(elapsed * 2.1) * 1.1;
+
+        const bodyShiftY = pedalBob + breathe;
+        dom.pelicanUpper.setAttribute(
+          "transform",
+          `translate(0, ${bodyShiftY.toFixed(2)}) rotate(${torsoRock.toFixed(2)} 565 340)`
+        );
+
+        // Tail gently counter-balances the pedaling cadence
+        const tailWag = Math.sin(crankAngle * 2 - 1.1) * 2.6;
+        dom.pelicanTail.setAttribute("transform", `rotate(${tailWag.toFixed(2)} 504 322)`);
+
+        // Natural avian head stabilization (birds stabilize head in space!) + happy perk when bell rings
+        let bellPerkY = 0, bellPerkRot = 0;
+        if (bellRingTime >= 0) {
+          if (playing) bellRingTime += dt;
+          if (bellRingTime > 0.95) {
+            bellRingTime = -1;
+            dom.bellWaves.setAttribute("opacity", "0");
+          } else {
+            const p = bellRingTime / 0.95;
+            const waveAlpha = Math.sin(p * Math.PI) * 0.95;
+            const waveScale = 0.8 + p * 0.55;
+            dom.bellWaves.setAttribute("opacity", waveAlpha.toFixed(2));
+            dom.bellWaves.setAttribute("transform", `scale(${waveScale.toFixed(2)})`);
+            bellPerkY = -Math.sin(p * Math.PI) * 7;
+            bellPerkRot = -Math.sin(p * Math.PI) * 6.5;
+          }
+        }
+
+        const headCounterY = -bodyShiftY * 0.58 + bellPerkY;
+        const headNod = Math.sin(crankAngle * 2 - 1.2) * 1.8 + bellPerkRot;
+        dom.pelicanHead.setAttribute(
+          "transform",
+          `translate(658, ${(152 + headCounterY).toFixed(2)}) rotate(${headNod.toFixed(2)})`
+        );
+
+        // Seamlessly flex S-curved neck contour to follow stabilized head
+        const hy = headCounterY;
+        const midY = hy * 0.48;
+        dom.neckContour.setAttribute("d",
+          `M 604 248
+           C 596 ${(218 + midY).toFixed(1)}, 598 ${(184 + midY).toFixed(1)}, 622 ${(154 + hy).toFixed(1)}
+           C 634 ${(138 + hy).toFixed(1)}, 654 ${(134 + hy).toFixed(1)}, 672 ${(138 + hy).toFixed(1)}
+           C 684 ${(142 + hy).toFixed(1)}, 686 ${(164 + hy).toFixed(1)}, 674 ${(176 + hy).toFixed(1)}
+           C 656 ${(194 + midY).toFixed(1)}, 652 ${(216 + midY * 0.6).toFixed(1)}, 668 256
+           C 650 264, 622 262, 604 248 Z`
+        );
+        dom.neckHighlight.setAttribute("d",
+          `M 672 ${(178 + hy).toFixed(1)} C 655 ${(196 + midY).toFixed(1)}, 653 ${(218 + midY * 0.6).toFixed(1)}, 666 254`
+        );
+        dom.neckShadow.setAttribute("d",
+          `M 606 244 C 598 ${(214 + midY).toFixed(1)}, 601 ${(184 + midY).toFixed(1)}, 622 ${(157 + hy).toFixed(1)}`
+        );
+
+        // Secondary physics: soft elastic sway of the hanging gular throat pouch
+        const pouchSway = Math.sin(crankAngle * 2 - 1.85) * 2.4 + Math.sin(elapsed * 5.2) * 0.45;
+        const pouchScaleY = 1 + Math.sin(crankAngle * 2 - 1.6) * 0.025;
+        dom.pelicanPouch.setAttribute(
+          "transform",
+          `translate(18, 12) rotate(${pouchSway.toFixed(2)}) scale(1, ${pouchScaleY.toFixed(3)}) translate(-18, -12)`
+        );
+
+        // Coastal breeze fluttering the wispy nape crest feathers
+        const windTime = elapsed * (5.8 + speedMult * 3.5);
+        for (let i = 0; i < crestFeathers.length; i++) {
+          const cf = crestFeathers[i];
+          const rot = Math.sin(windTime + cf.phase) * (2.6 + speedMult * 1.4);
+          cf.node.setAttribute("transform", `rotate(${rot.toFixed(2)} -34 0)`);
+        }
+
+        // Natural periodic eye blink
+        if (playing) {
+          if (blinkTimer < 0 && elapsed >= nextBlinkAt) {
+            blinkTimer = 0;
+            nextBlinkAt = elapsed + 2.8 + Math.random() * 3.4;
+          }
+          if (blinkTimer >= 0) {
+            blinkTimer += dt;
+            const blinkDur = 0.16;
+            if (blinkTimer >= blinkDur) {
+              blinkTimer = -1;
+              dom.blinkLid.setAttribute("ry", "0");
+            } else {
+              const b = Math.sin((blinkTimer / blinkDur) * Math.PI);
+              dom.blinkLid.setAttribute("ry", (b * 7.2).toFixed(2));
+            }
+          }
+        }
+
+        // Analytical 2-bone IK for BOTH pelican legs
+        const hipNear = { x: BASE_HIP_NEAR.x, y: BASE_HIP_NEAR.y + bodyShiftY * 0.72 };
+        const hipFar  = { x: BASE_HIP_FAR.x,  y: BASE_HIP_FAR.y  + bodyShiftY * 0.72 };
+
+        const kneeNear = solveTwoBoneIK(hipNear, nearPedalPos, LEG_L1, LEG_L2, +1);
+        const kneeFar  = solveTwoBoneIK(hipFar,  farPedalPos,  LEG_L1, LEG_L2, +1);
+
+        nearLegRig.update(hipNear, kneeNear, nearPedalPos, nearPedalTilt);
+        farLegRig.update(hipFar,   kneeFar,  farPedalPos,  farPedalTilt);
+
+        // Analytical 2-bone IK for BOTH pelican wings gripping the handlebars
+        const shNear = { x: BASE_SHOULDER_NEAR.x + torsoRock * 0.5, y: BASE_SHOULDER_NEAR.y + bodyShiftY };
+        const shFar  = { x: BASE_SHOULDER_FAR.x  + torsoRock * 0.5, y: BASE_SHOULDER_FAR.y  + bodyShiftY };
+        nearWingRig.update(shNear, GRIP_NEAR, windTime);
+        farWingRig.update(shFar,   GRIP_FAR,  windTime + 1.2);
+
+        // Subtle cast shadow breath
+        dom.shadowBody.setAttribute("rx", (145 + Math.sin(crankAngle * 2) * 4).toFixed(1));
+        dom.shadowMain.setAttribute("opacity", (0.45 + Math.sin(crankAngle * 2) * 0.025).toFixed(3));
+
+        // =================================================================
+        // C. TRUE GROUND-LOCKED ROAD & MULTI-LAYER PARALLAX SCENERY
+        // =================================================================
+        const groundTravel = wheelAngle * R_WHEEL; // EXACT pixels rolled with ZERO tire slip!
+
+        // Foreground road (100% ground speed)
+        const roadOffset = ((groundTravel % ROAD_TILE) + ROAD_TILE) % ROAD_TILE;
+        roadTileA.setAttribute("transform", `translate(${(-roadOffset).toFixed(2)}, 0)`);
+        roadTileB.setAttribute("transform", `translate(${(ROAD_TILE - roadOffset).toFixed(2)}, 0)`);
+
+        // Midground coastal seawall & timber railing (46% parallax)
+        const midOffset = (((groundTravel * 0.46) % MID_TILE) + MID_TILE) % MID_TILE;
+        midTileA.setAttribute("transform", `translate(${(-midOffset).toFixed(2)}, 0)`);
+        midTileB.setAttribute("transform", `translate(${(MID_TILE - midOffset).toFixed(2)}, 0)`);
+
+        // Distant headland subtle parallax (4% drift)
+        const headOffset = ((groundTravel * 0.03) % 1500);
+        dom.headland.setAttribute("transform", `translate(${(-headOffset * 0.15).toFixed(2)}, 0)`);
+
+        // Clouds drift gently across coastal sky
+        const cloudDriftFar  = groundTravel * 0.014 + elapsed * 3.5;
+        const cloudDriftNear = groundTravel * 0.028 + elapsed * 7.5;
+        for (const c of cloudsFar) {
+          const cx = (((c.x - cloudDriftFar) % 1800) + 1800) % 1800 - 200;
+          c.node.setAttribute("transform", `translate(${cx.toFixed(1)}, ${c.y.toFixed(1)}) scale(${c.s.toFixed(2)})`);
+        }
+        for (const c of cloudsNear) {
+          const cx = (((c.x - cloudDriftNear) % 1800) + 1800) % 1800 - 200;
+          c.node.setAttribute("transform", `translate(${cx.toFixed(1)}, ${c.y.toFixed(1)}) scale(${c.s.toFixed(2)})`);
+        }
+
+        // Distant soaring gulls
+        for (const b of distantBirds) {
+          const bx = (((b.x - elapsed * b.speed - groundTravel * 0.02) % 1600) + 1600) % 1600 - 100;
+          const flap = Math.sin(elapsed * 4.2 + b.phase) * 5.2;
+          b.node.setAttribute("d", `M -14 ${(2 + flap).toFixed(1)} Q -6 ${(-5 - flap * 0.5).toFixed(1)} 0 0 Q 6 ${(-5 - flap * 0.5).toFixed(1)} 14 ${(2 + flap).toFixed(1)}`);
+          b.node.setAttribute("transform", `translate(${bx.toFixed(1)}, ${(b.y + Math.sin(elapsed + b.phase) * 4).toFixed(1)}) scale(${b.s.toFixed(2)})`);
+        }
+
+        // Shimmering sunlit ocean ripples
+        for (const r of oceanRipples) {
+          const rx = (((r.x - groundTravel * (0.04 + r.depth * 0.14)) % 1480) + 1480) % 1480 - 40;
+          const shimmer = 0.65 + 0.35 * Math.sin(elapsed * 3.2 + r.phase);
+          r.node.setAttribute("transform", `translate(${rx.toFixed(1)}, ${r.y.toFixed(1)}) scale(${shimmer.toFixed(2)}, 1)`);
+        }
+
+        // Sunlit coastal breeze motes
+        for (const m of motes) {
+          const mx = (((m.x - groundTravel * 0.65 - elapsed * m.speed) % 1460) + 1460) % 1460 - 30;
+          const my = m.y + Math.sin(elapsed * 2.4 + m.phase) * 10;
+          m.node.setAttribute("cx", mx.toFixed(1));
+          m.node.setAttribute("cy", my.toFixed(1));
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
