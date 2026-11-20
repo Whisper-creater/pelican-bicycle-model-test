@@ -11,12 +11,11 @@
 | 模型系列 | 测试版本 | HTML 文件 |
 | --- | --- | --- |
 | Claude | Fable 5.2 | [pelican_bike.html](claude/fable5.2/pelican_bike.html) |
+| Claude | Opus 5.5 | [pelican_bicycle.html](claude/opus5.5/pelican_bicycle.html) |
 | Gemini | Argon | [pelican_bicycle.html](gemini/argon/pelican_bicycle.html) |
 | Gemini | Hydrogen | [pelican-bicycle.html](gemini/hydrogen/pelican-bicycle.html) |
 | Gemini | Neon | [pelican-bicycle.html](gemini/neon/pelican-bicycle.html) |
 | GPT | 6.2 Astra | [pelican.html](gpt/6.2Astra/pelican.html) |
-
-Claude Opus 5.5 的目录暂时没有 HTML 文件。
 
 ## 查看动画
 
